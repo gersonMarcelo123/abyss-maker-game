@@ -1,0 +1,29 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/world/CustomizableWall.tscn" id="1_wall"]
+
+[node name="ChunkInterior08" type="Node2D"]
+
+[node name="FunnelTL" parent="." instance=ExtResource("1_wall")]
+position = Vector2(64, 64)
+wall_size = Vector2(32, 16)
+
+[node name="FunnelTR" parent="." instance=ExtResource("1_wall")]
+position = Vector2(144, 64)
+wall_size = Vector2(32, 16)
+
+[node name="FunnelBL" parent="." instance=ExtResource("1_wall")]
+position = Vector2(64, 160)
+wall_size = Vector2(32, 16)
+
+[node name="FunnelBR" parent="." instance=ExtResource("1_wall")]
+position = Vector2(144, 160)
+wall_size = Vector2(32, 16)
+
+[node name="MidPillarL" parent="." instance=ExtResource("1_wall")]
+position = Vector2(48, 112)
+wall_size = Vector2(16, 16)
+
+[node name="MidPillarR" parent="." instance=ExtResource("1_wall")]
+position = Vector2(176, 112)
+wall_size = Vector2(16, 16)

@@ -1,0 +1,17 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/world/CustomizableWall.tscn" id="1_wall"]
+
+[node name="ChunkInterior10" type="Node2D"]
+
+[node name="ShrineAltar" parent="." instance=ExtResource("1_wall")]
+position = Vector2(104, 104)
+wall_size = Vector2(32, 32)
+
+[node name="WingLeft" parent="." instance=ExtResource("1_wall")]
+position = Vector2(64, 80)
+wall_size = Vector2(16, 80)
+
+[node name="WingRight" parent="." instance=ExtResource("1_wall")]
+position = Vector2(160, 80)
+wall_size = Vector2(16, 80)

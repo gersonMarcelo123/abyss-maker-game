@@ -9,8 +9,12 @@
 [ext_resource type="PackedScene" path="res://scenes/items/GroundItem.tscn" id="7_items"]
 [ext_resource type="PackedScene" path="res://scenes/entities/enemies/MeleeEnemy.tscn" id="8_melee"]
 [ext_resource type="PackedScene" path="res://scenes/entities/enemies/RangedEnemy.tscn" id="9_ranged"]
+[ext_resource type="PackedScene" path="res://scenes/world/ReturnTeleport.tscn" id="10_teleport"]
 
 [node name="TestLevel" type="Node2D" unique_id=183531368]
+
+[node name="ReturnTeleport" parent="." instance=ExtResource("10_teleport")]
+position = Vector2(0, 0)
 
 [node name="Player" parent="." unique_id=165562969 instance=ExtResource("1_k64b4")]
 position = Vector2(71, 66)

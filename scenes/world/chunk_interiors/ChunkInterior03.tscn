@@ -1,0 +1,25 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/world/CustomizableWall.tscn" id="1_wall"]
+
+[node name="ChunkInterior03" type="Node2D"]
+
+[node name="CenterBlock" parent="." instance=ExtResource("1_wall")]
+position = Vector2(104, 104)
+wall_size = Vector2(32, 32)
+
+[node name="Flank1" parent="." instance=ExtResource("1_wall")]
+position = Vector2(56, 56)
+wall_size = Vector2(24, 24)
+
+[node name="Flank2" parent="." instance=ExtResource("1_wall")]
+position = Vector2(160, 56)
+wall_size = Vector2(24, 24)
+
+[node name="Flank3" parent="." instance=ExtResource("1_wall")]
+position = Vector2(56, 160)
+wall_size = Vector2(24, 24)
+
+[node name="Flank4" parent="." instance=ExtResource("1_wall")]
+position = Vector2(160, 160)
+wall_size = Vector2(24, 24)

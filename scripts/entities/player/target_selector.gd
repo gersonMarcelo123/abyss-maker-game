@@ -6,7 +6,7 @@ class_name TargetSelector
 extends Node
 
 @export var max_range: float = 500.0
-@export var cone_half_angle_deg: float = 24.0
+@export var cone_half_angle_deg: float = 28.0
 @export var enemy_group: String = "enemies"
 
 var current_target: Node2D = null
@@ -17,9 +17,8 @@ var current_target: Node2D = null
 signal target_changed(old_target: Node2D, new_target: Node2D)
 
 ## Llamar cada physics_process con la posición del jugador y su dirección
-## de apuntado actual. Si aim_dir es Vector2.ZERO (p. ej. mando sin mover
-## el stick derecho) se conserva el último objetivo válido en vez de
-## perderlo cada frame.
+## de apuntado actual. Si aim_dir es Vector2.ZERO (p. ej. stick derecho en reposo
+## o dentro de la deadzone) se conserva el último objetivo válido en vez de perderlo.
 func update(origin: Vector2, aim_dir: Vector2) -> Node2D:
 	_drop_target_if_invalid()
 
@@ -39,8 +38,8 @@ func update(origin: Vector2, aim_dir: Vector2) -> Node2D:
 		var angle_to_enemy := aim_dir.angle_to(to_enemy.normalized())
 		if absf(angle_to_enemy) > deg_to_rad(cone_half_angle_deg):
 			continue
-		# El objetivo cercano tiene prioridad dentro del cono de apuntado.
-		var score: float = dist + absf(angle_to_enemy) * 150.0
+		# Prioridad absoluta al objetivo más cercano apuntado en la dirección indicada
+		var score: float = dist * (1.0 + absf(angle_to_enemy) * 0.15)
 		if score < best_score:
 			best_score = score
 			best = enemy

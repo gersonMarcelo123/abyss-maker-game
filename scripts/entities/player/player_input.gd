@@ -13,7 +13,7 @@ extends Node
 @export var device_id: int = -1
 
 const STICK_DEADZONE := 0.2
-const AIM_STICK_DEADZONE := 0.38
+const AIM_STICK_DEADZONE := 0.42
 const TRIGGER_THRESHOLD := 0.5
 const MOUSE_AIM_MIN_DIST := 4.0
 
@@ -61,16 +61,14 @@ func get_move_vector() -> Vector2:
 	else:
 		v.x = Input.get_joy_axis(device_id, JOY_AXIS_LEFT_X)
 		v.y = Input.get_joy_axis(device_id, JOY_AXIS_LEFT_Y)
-		if v.length() < AIM_STICK_DEADZONE:
+		if v.length() < STICK_DEADZONE:
 			return Vector2.ZERO
 	return v.limit_length(1.0)
 
 ## Dirección de apuntado desde la posición del jugador (para elegir objetivo).
 ## Teclado: hacia el mouse. Mando: dirección del stick derecho.
 ## Devuelve Vector2.ZERO si no hay una dirección "intencional" clara
-## (mouse casi encima del jugador, o stick derecho centrado) — en ese caso
-## Player.gd/TargetSelector deben conservar el objetivo previo en vez de
-## perderlo cada frame.
+## (mouse casi encima del jugador, o stick derecho centrado / dentro de deadzone).
 func get_aim_vector(from_node: Node2D) -> Vector2:
 	if device_id == -1:
 		var mouse_pos := from_node.get_global_mouse_position()
@@ -83,7 +81,7 @@ func get_aim_vector(from_node: Node2D) -> Vector2:
 			Input.get_joy_axis(device_id, JOY_AXIS_RIGHT_X),
 			Input.get_joy_axis(device_id, JOY_AXIS_RIGHT_Y)
 		)
-		if v.length() < STICK_DEADZONE:
+		if v.length() < AIM_STICK_DEADZONE:
 			return Vector2.ZERO
 		return v.normalized()
 
