@@ -62,22 +62,31 @@ func process_attack(owner_body: Node2D, target: Node2D, want_attack: bool) -> bo
 		return false
 
 	var distance := owner_body.global_position.distance_to(target.global_position)
-	var in_range := distance <= attack_range
+	var start_strike_range := attack_range * 0.7 if attack_type == AttackType.MELEE else attack_range * 0.95
+	var keep_strike_range := attack_range * 1.4
 
-	if not in_range:
-		_stop_attacking() # se está acercando, no golpea todavía
+	# Si ya está cargando el golpe, no lo cancela a menos que el objetivo escape mucho del rango
+	if is_winding_up:
+		if distance > keep_strike_range:
+			_stop_attacking()
+			return true
+		return false
+
+	var in_strike_range := distance <= start_strike_range
+
+	if not in_strike_range:
+		is_attacking = false
 		return true
 
 	if not is_attacking:
 		is_attacking = true
 		attack_started.emit()
 
-	# Solo se puede ARRANCAR un nuevo windup si no hay uno en curso y ya
-	# pasó el cooldown de cadencia. El cooldown se fija AQUÍ (al iniciar el
-	# windup, no al golpear), así attacks_per_second sigue representando
-	# fielmente "golpes por segundo" incluyendo el retraso.
 	if _windup_remaining < 0.0 and _cooldown <= 0.0:
-		_windup_remaining = attack_windup_duration
+		var effective_windup := attack_windup_duration
+		if attack_type == AttackType.MELEE:
+			effective_windup = min(attack_windup_duration, 0.18)
+		_windup_remaining = effective_windup
 		_pending_target = target
 		_cooldown = 1.0 / max(attacks_per_second, 0.01)
 		is_winding_up = true

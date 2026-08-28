@@ -1,8 +1,8 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://bq17s4mhaktns"]
 
-[ext_resource type="Script" path="res://scripts/world/lobby.gd" id="1_lobby"]
+[ext_resource type="Script" uid="uid://bc65o0pyxq87b" path="res://scripts/world/lobby.gd" id="1_lobby"]
 
-[node name="Lobby" type="Control"]
+[node name="Lobby" type="Control" unique_id=1738325611]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -11,7 +11,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_lobby")
 
-[node name="ColorRect" type="ColorRect" parent="."]
+[node name="ColorRect" type="ColorRect" parent="." unique_id=1583321195]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -20,7 +20,7 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.08, 0.09, 0.13, 1)
 
-[node name="CenterContainer" type="CenterContainer" parent="."]
+[node name="CenterContainer" type="CenterContainer" parent="." unique_id=1571211229]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -28,33 +28,33 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer" unique_id=803505776]
 layout_mode = 2
 theme_override_constants/separation = 16
 alignment = 1
 
-[node name="Title" type="Label" parent="CenterContainer/VBoxContainer"]
+[node name="Title" type="Label" parent="CenterContainer/VBoxContainer" unique_id=970276397]
 layout_mode = 2
 theme_override_font_sizes/font_size = 32
 text = "ABYSS MAKER"
 horizontal_alignment = 1
 
-[node name="Subtitle" type="Label" parent="CenterContainer/VBoxContainer"]
+[node name="Subtitle" type="Label" parent="CenterContainer/VBoxContainer" unique_id=113432822]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.75, 0.85, 1)
 theme_override_font_sizes/font_size = 14
 text = "Selecciona un modo de juego"
 horizontal_alignment = 1
 
-[node name="HSeparator" type="HSeparator" parent="CenterContainer/VBoxContainer"]
+[node name="HSeparator" type="HSeparator" parent="CenterContainer/VBoxContainer" unique_id=1745967860]
 layout_mode = 2
 
-[node name="TestLevel" type="Button" parent="CenterContainer/VBoxContainer"]
+[node name="TestLevel" type="Button" parent="CenterContainer/VBoxContainer" unique_id=2105333626]
 custom_minimum_size = Vector2(200, 42)
 layout_mode = 2
 text = "Test Level"
 
-[node name="GeneratedLevel1" type="Button" parent="CenterContainer/VBoxContainer"]
+[node name="GeneratedLevel1" type="Button" parent="CenterContainer/VBoxContainer" unique_id=987652382]
 custom_minimum_size = Vector2(200, 42)
 layout_mode = 2
 text = "Nivel Generado 1"

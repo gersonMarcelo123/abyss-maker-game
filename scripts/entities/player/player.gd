@@ -93,15 +93,29 @@ func _physics_process(_delta: float) -> void:
 
 	_handle_menu_input()
 
+	var move_dir := player_input.get_move_vector()
+	var is_holding_attack := player_input.is_pressed("attack")
+	var is_moving_manually := move_dir != Vector2.ZERO
+
 	var aim_dir := player_input.get_aim_vector(self)
 	if aim_dir != Vector2.ZERO:
 		_last_aim_dir = aim_dir
 
-	var target := target_selector.update(global_position, aim_dir)
+	# No cambiar de objetivo mientras se mantiene pulsado el botón de atacar
+	var target: Node2D = null
+	if is_holding_attack and is_instance_valid(target_selector.current_target):
+		target = target_selector.current_target
+	else:
+		target = target_selector.update(global_position, aim_dir)
+
 	if not is_instance_valid(target):
 		target = null
 
-	var want_attack := player_input.is_pressed("attack")
+	# Te puedes mover mientras mantienes atacar pero no atacas. Al dejar de moverte, ataca/persigue.
+	var want_attack := is_holding_attack and not is_moving_manually
+	if is_moving_manually and attack_component.is_attacking:
+		attack_component.cancel()
+
 	## El objeto se recoge estando encima y pulsando ataque en CUALQUIER
 	## dirección. Solo se prioriza atacar cuando el enemigo ya está a rango.
 	if player_input.is_just_pressed("attack") and _try_pickup_nearby_item():
@@ -113,17 +127,21 @@ func _physics_process(_delta: float) -> void:
 
 	var must_approach := attack_component.process_attack(self, target, want_attack)
 
-	_move(must_approach, target)
+	_move(must_approach, target, move_dir, is_moving_manually)
 	move_and_slide()
 	_update_animation()
 
 	_handle_ability_input()
 
-func _move(must_approach: bool, target: Node2D) -> void:
-	var move_dir := player_input.get_move_vector()
+func _move(must_approach: bool, target: Node2D, move_dir: Vector2, is_moving_manually: bool) -> void:
 	var is_sprinting := player_input.is_pressed("sprint") and not attack_component.is_attacking
 
-	if attack_component.is_attacking:
+	if is_moving_manually:
+		# Movimiento manual libre prioritario sobre el ataque
+		var speed := move_speed * (sprint_multiplier if is_sprinting else 1.0)
+		velocity = move_dir * speed
+		_state = FacingState.MOVING
+	elif attack_component.is_attacking:
 		# Plantado golpeando: no se mueve, pero se orienta hacia el objetivo.
 		velocity = Vector2.ZERO
 		if is_instance_valid(target):
@@ -134,10 +152,6 @@ func _move(must_approach: bool, target: Node2D) -> void:
 		velocity = to_target.normalized() * move_speed
 		_last_aim_dir = to_target.normalized()
 		_state = FacingState.APPROACHING
-	elif move_dir != Vector2.ZERO:
-		var speed := move_speed * (sprint_multiplier if is_sprinting else 1.0)
-		velocity = move_dir * speed
-		_state = FacingState.MOVING
 	else:
 		velocity = Vector2.ZERO
 		_state = FacingState.IDLE
