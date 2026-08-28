@@ -274,5 +274,5 @@ func _recalculate() -> void:
 		health_changed.emit(current_health, max_health)
 	if old_max_mana > 0.0 and max_mana != old_max_mana:
 		current_mana += max_mana - old_max_mana
-		health_changed.emit(current_mana, max_mana)
+		mana_changed.emit(current_mana, max_mana)
 	stats_changed.emit()

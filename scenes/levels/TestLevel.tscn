@@ -13,8 +13,8 @@
 
 [node name="TestLevel" type="Node2D" unique_id=183531368]
 
-[node name="ReturnTeleport" parent="." instance=ExtResource("10_teleport")]
-position = Vector2(0, 0)
+[node name="ReturnTeleport" parent="." unique_id=1056967648 instance=ExtResource("10_teleport")]
+position = Vector2(-240, 176)
 
 [node name="Player" parent="." unique_id=165562969 instance=ExtResource("1_k64b4")]
 position = Vector2(71, 66)
