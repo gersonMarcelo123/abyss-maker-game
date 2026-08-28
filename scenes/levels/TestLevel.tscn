@@ -1,0 +1,160 @@
+[gd_scene format=3 uid="uid://f727ul3cjn1m"]
+
+[ext_resource type="PackedScene" uid="uid://djp6athdlnl4h" path="res://scenes/entities/player/Player.tscn" id="1_k64b4"]
+[ext_resource type="Script" uid="uid://bu5ieh8sw1w3g" path="res://scripts/entities/enemies/dummy_spawner.gd" id="2_oyflx"]
+[ext_resource type="PackedScene" uid="uid://c5coy62o7uxh0" path="res://scenes/entities/enemies/DummyEnemy.tscn" id="3_po3hi"]
+[ext_resource type="Script" uid="uid://c5snehj1r6764" path="res://scripts/world/camera_controller.gd" id="4_oyflx"]
+[ext_resource type="PackedScene" path="res://scenes/world/TimedEffectPlatform.tscn" id="5_po3hi"]
+[ext_resource type="Script" uid="uid://cr0mbrx7xjxdu" path="res://scripts/ui/inventory_menu.gd" id="6_7g7jb"]
+[ext_resource type="PackedScene" path="res://scenes/items/GroundItem.tscn" id="7_items"]
+[ext_resource type="PackedScene" path="res://scenes/entities/enemies/MeleeEnemy.tscn" id="8_melee"]
+[ext_resource type="PackedScene" path="res://scenes/entities/enemies/RangedEnemy.tscn" id="9_ranged"]
+
+[node name="TestLevel" type="Node2D" unique_id=183531368]
+
+[node name="Player" parent="." unique_id=165562969 instance=ExtResource("1_k64b4")]
+position = Vector2(71, 66)
+
+[node name="DummySpawner" type="Node2D" parent="." unique_id=1142837202]
+position = Vector2(92, 0)
+script = ExtResource("2_oyflx")
+dummy_scene = ExtResource("3_po3hi")
+
+[node name="MainCamera" type="Camera2D" parent="." unique_id=1616860028 node_paths=PackedStringArray("follow_target")]
+script = ExtResource("4_oyflx")
+follow_target = NodePath("../Player")
+
+[node name="PlatformStrength" parent="." unique_id=1887418600 instance=ExtResource("5_po3hi")]
+position = Vector2(185, 108)
+effect_type = 2
+amount = 1.0
+
+[node name="PlatformIntelligence" parent="." unique_id=1607268995 instance=ExtResource("5_po3hi")]
+position = Vector2(310, 109)
+effect_type = 3
+amount = 1.0
+
+[node name="PlatformAgility" parent="." unique_id=1202090253 instance=ExtResource("5_po3hi")]
+position = Vector2(311, 217)
+effect_type = 4
+
+[node name="PlatformDamage" parent="." unique_id=1700492136 instance=ExtResource("5_po3hi")]
+position = Vector2(-63, 102)
+amount = 20.0
+interval = 1.0
+
+[node name="PlatformHeal" parent="." unique_id=626528166 instance=ExtResource("5_po3hi")]
+position = Vector2(-63, 218)
+effect_type = 1
+
+[node name="InventoryMenu" type="CanvasLayer" parent="." unique_id=1689566082]
+script = ExtResource("6_7g7jb")
+
+[node name="TimedEffectPlatform" parent="." unique_id=249213360 instance=ExtResource("5_po3hi")]
+position = Vector2(183, 219)
+effect_type = 5
+amount = 1.0
+
+[node name="PlatformPhysicalDamage" parent="." unique_id=1653662124 instance=ExtResource("5_po3hi")]
+position = Vector2(430, 45)
+effect_type = 6
+amount = 5.0
+color = Color(0.85, 0.22, 0.18, 0.6)
+
+[node name="PlatformMagicDamage" parent="." unique_id=501129000 instance=ExtResource("5_po3hi")]
+position = Vector2(540, 45)
+effect_type = 7
+amount = 5.0
+color = Color(0.58, 0.24, 0.9, 0.6)
+
+[node name="PlatformMovementSpeed" parent="." unique_id=2051342952 instance=ExtResource("5_po3hi")]
+position = Vector2(430, 135)
+effect_type = 8
+amount = 5.0
+color = Color(0.15, 0.72, 0.9, 0.6)
+
+[node name="PlatformCooldownReduction" parent="." unique_id=472865979 instance=ExtResource("5_po3hi")]
+position = Vector2(540, 135)
+effect_type = 9
+amount = 5.0
+color = Color(0.2, 0.45, 0.95, 0.6)
+
+[node name="PlatformHealingBonus" parent="." unique_id=181505120 instance=ExtResource("5_po3hi")]
+position = Vector2(430, 225)
+effect_type = 10
+amount = 5.0
+color = Color(0.2, 0.85, 0.45, 0.6)
+
+[node name="PlatformRangedAttackRange" parent="." unique_id=272204012 instance=ExtResource("5_po3hi")]
+position = Vector2(540, 225)
+effect_type = 11
+interval = 1.0
+color = Color(0.95, 0.62, 0.15, 0.6)
+
+[node name="PlatformCastRange" parent="." unique_id=1854878040 instance=ExtResource("5_po3hi")]
+position = Vector2(430, 315)
+effect_type = 12
+color = Color(0.95, 0.35, 0.72, 0.6)
+
+[node name="PlatformArmor" parent="." unique_id=300380295 instance=ExtResource("5_po3hi")]
+position = Vector2(540, 315)
+effect_type = 13
+color = Color(0.55, 0.62, 0.72, 0.6)
+
+[node name="PlatformResetStats" parent="." unique_id=1044146163 instance=ExtResource("5_po3hi")]
+position = Vector2(70, 315)
+effect_type = 14
+interval = 1.0
+color = Color(0.95, 0.95, 0.95, 0.65)
+
+[node name="PlatformSpawnEncounter" parent="." unique_id=1865592007 instance=ExtResource("5_po3hi")]
+position = Vector2(320, 315)
+effect_type = 15
+color = Color(0.75, 0.2, 0.2, 0.7)
+melee_enemy_scene = ExtResource("8_melee")
+ranged_enemy_scene = ExtResource("9_ranged")
+
+[node name="PlaceholderSword" parent="." unique_id=1361529029 instance=ExtResource("7_items")]
+position = Vector2(20, 25)
+item_id = "placeholder_sword"
+display_name = "Espada"
+short_name = "Esp"
+color = Color(0.9, 0.35, 0.2, 1)
+bonuses = {
+"physical_damage": 8.0,
+"ranged_attack_range": 12.0
+}
+
+[node name="PlaceholderOrb" parent="." unique_id=1767819926 instance=ExtResource("7_items")]
+position = Vector2(125, 25)
+item_id = "placeholder_orb"
+display_name = "Orbe mágico"
+short_name = "Orb"
+color = Color(0.55, 0.3, 0.95, 1)
+bonuses = {
+"cooldown_reduction_percent": 5.0,
+"magic_damage": 12.0
+}
+
+[node name="PlaceholderBoots" parent="." unique_id=508229643 instance=ExtResource("7_items")]
+position = Vector2(20, 165)
+item_id = "placeholder_boots"
+display_name = "Botas"
+short_name = "Bot"
+color = Color(0.2, 0.75, 0.95, 1)
+bonuses = {
+"cast_range": 15.0,
+"move_speed_percent": 10.0
+}
+
+[node name="PlaceholderCharm" parent="." unique_id=680898150 instance=ExtResource("7_items")]
+position = Vector2(125, 165)
+item_id = "placeholder_charm"
+display_name = "Amuleto"
+short_name = "Amu"
+color = Color(0.25, 0.9, 0.45, 1)
+bonuses = {
+"armor": 8.0,
+"healing_bonus_percent": 10.0,
+"strength": 2
+}

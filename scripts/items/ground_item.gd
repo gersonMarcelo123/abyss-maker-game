@@ -1,0 +1,33 @@
+## Objeto temporal visible en el suelo. Los efectos reales de artefactos se
+## añadirán después; por ahora conserva nombre e identidad en el inventario.
+class_name GroundItem
+extends Node2D
+
+@export var item_id: String = "artifact_placeholder"
+@export var display_name: String = "Artefacto"
+@export var short_name: String = "Art"
+@export var color: Color = Color(0.95, 0.8, 0.25)
+@export var pickup_range: float = 26.0
+@export var bonuses: Dictionary = {}
+
+func _ready() -> void:
+	add_to_group("ground_items")
+	var visual: Polygon2D = $Visual
+	visual.polygon = PackedVector2Array([
+		Vector2(0, -10), Vector2(9, 0), Vector2(0, 10), Vector2(-9, 0),
+	])
+	visual.color = color
+	var label: Label = $Label
+	label.text = display_name
+
+func get_item_data() -> Dictionary:
+	return {"id": item_id, "name": display_name, "short_name": short_name, "bonuses": bonuses.duplicate(true)}
+
+func try_pickup(player: Node) -> bool:
+	if not player.has_method("add_inventory_item"):
+		return false
+	if player.add_inventory_item(get_item_data()):
+		print("%s recogió %s" % [player.name, display_name])
+		queue_free()
+		return true
+	return false

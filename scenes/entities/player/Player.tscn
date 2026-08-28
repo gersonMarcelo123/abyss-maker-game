@@ -1,0 +1,69 @@
+[gd_scene format=3 uid="uid://djp6athdlnl4h"]
+
+[ext_resource type="Script" uid="uid://dp4vdgtkw7dfx" path="res://scripts/entities/player/player.gd" id="1_oklip"]
+[ext_resource type="Script" uid="uid://cgpowyhmhpfm" path="res://scripts/entities/player/player_input.gd" id="2_3neps"]
+[ext_resource type="PackedScene" uid="uid://on1137cdhq5u" path="res://scenes/entities/player/Projectile.tscn" id="2_71ffi"]
+[ext_resource type="Texture2D" uid="uid://kew2qio4li88" path="res://assets/sprites/characters/Capa 1 copia 2.png" id="2_fr5wx"]
+[ext_resource type="Script" uid="uid://dkdvqttdqn62t" path="res://scripts/entities/player/target_selector.gd" id="3_3neps"]
+[ext_resource type="Script" uid="uid://bxvctqv6fcypy" path="res://scripts/components/attack_component.gd" id="4_d3b7y"]
+[ext_resource type="Script" uid="uid://drf0bl6hf4vx" path="res://scripts/components/character_stats.gd" id="7_s8ud5"]
+[ext_resource type="Script" uid="uid://b72qbqehp3rhf" path="res://scripts/entities/player/player_status_bar.gd" id="8_lf38l"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_bhunq"]
+size = Vector2(18, 18)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_71ffi"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("2_fr5wx")
+}],
+"loop": 1,
+"name": &"new_animation",
+"speed": 5.0
+}]
+
+[node name="Player" type="CharacterBody2D" unique_id=165562969]
+collision_mask = 0
+script = ExtResource("1_oklip")
+melee_attack_range = 80.0
+ranged_attack_range = 150.0
+projectile_scene = ExtResource("2_71ffi")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1492760848]
+shape = SubResource("RectangleShape2D_bhunq")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=604286158]
+light_mask = 2
+visibility_layer = 2
+sprite_frames = SubResource("SpriteFrames_71ffi")
+animation = &"new_animation"
+
+[node name="PlayerInput" type="Node" parent="." unique_id=1796226821]
+script = ExtResource("2_3neps")
+
+[node name="TargetSelector" type="Node" parent="." unique_id=1171256961]
+script = ExtResource("3_3neps")
+
+[node name="AttackComponent" type="Node" parent="." unique_id=1973544245]
+script = ExtResource("4_d3b7y")
+
+[node name="BodyPlaceholder" type="Polygon2D" parent="." unique_id=914200756]
+
+[node name="CharacterStats" type="Node" parent="." unique_id=1490280058]
+script = ExtResource("7_s8ud5")
+
+[node name="PlayerHUD" type="CanvasLayer" parent="." unique_id=1597233480]
+
+[node name="StatusBar" type="Node2D" parent="." unique_id=673540265]
+script = ExtResource("8_lf38l")
+
+[node name="HealthBG" type="Polygon2D" parent="StatusBar" unique_id=702740135]
+
+[node name="HealthFlash" type="Polygon2D" parent="StatusBar" unique_id=994880848]
+
+[node name="HealthFill" type="Polygon2D" parent="StatusBar" unique_id=802825703]
+
+[node name="ManaBG" type="Polygon2D" parent="StatusBar" unique_id=749121443]
+
+[node name="ManaFill" type="Polygon2D" parent="StatusBar" unique_id=1999513374]

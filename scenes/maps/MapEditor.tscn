@@ -1,0 +1,12 @@
+[gd_scene format=3 uid="uid://c42vgtiq5ton"]
+
+[ext_resource type="TileSet" uid="uid://bbrfmi02oq3wl" path="res://assets/tiles/AbyssTileset.tres" id="1_tileset"]
+
+[node name="MapEditor" type="Node2D" unique_id=283180896]
+
+[node name="Ground" type="TileMapLayer" parent="." unique_id=1954587406]
+tile_set = ExtResource("1_tileset")
+
+[node name="Walls" type="TileMapLayer" parent="." unique_id=697122528]
+z_index = 1
+tile_set = ExtResource("1_tileset")

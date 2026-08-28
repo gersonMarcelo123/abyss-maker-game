@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/entities/enemies/CombatEnemy.tscn" id="1"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/enem (2).png" id="2"]
+
+[node name="MeleeEnemy" instance=ExtResource("1")]
+combat_mode = 0
+max_health = 110.0
+move_speed = 60.0
+attack_damage = 9.0
+attack_range = 28.0
+
+[node name="Sprite2D" parent="." index="1"]
+texture = ExtResource("2")

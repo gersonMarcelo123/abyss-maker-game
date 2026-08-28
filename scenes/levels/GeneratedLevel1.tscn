@@ -1,0 +1,24 @@
+[gd_scene load_steps=4 format=3]
+[ext_resource type="PackedScene" path="res://scenes/world/ProceduralChunk.tscn" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/entities/player/Player.tscn" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/world/ReturnTeleport.tscn" id="3"]
+[node name="GeneratedLevel1" type="Node2D"]
+[node name="Player" parent="." instance=ExtResource("2")]
+position = Vector2(112, 112)
+[node name="StartChunk" parent="." instance=ExtResource("1")]
+position = Vector2(0, 0)
+layout_index = 0
+[node name="Chunk1" parent="." instance=ExtResource("1")]
+position = Vector2(240, 0)
+layout_index = 1
+[node name="Chunk2" parent="." instance=ExtResource("1")]
+position = Vector2(480, 0)
+layout_index = 3
+[node name="Chunk3" parent="." instance=ExtResource("1")]
+position = Vector2(720, 0)
+layout_index = 5
+[node name="Chunk4" parent="." instance=ExtResource("1")]
+position = Vector2(960, 0)
+layout_index = 7
+[node name="ReturnToLobby" parent="." instance=ExtResource("3")]
+position = Vector2(1160, 120)

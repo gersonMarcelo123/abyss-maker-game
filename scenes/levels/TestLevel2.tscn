@@ -1,0 +1,14 @@
+[gd_scene format=3 uid="uid://cra4eb1bcxwta"]
+
+[ext_resource type="PackedScene" uid="uid://djp6athdlnl4h" path="res://scenes/entities/player/Player.tscn" id="1_edk7u"]
+[ext_resource type="Script" uid="uid://bu5ieh8sw1w3g" path="res://scripts/entities/enemies/dummy_spawner.gd" id="2_43fjb"]
+[ext_resource type="PackedScene" uid="uid://c5coy62o7uxh0" path="res://scenes/entities/enemies/DummyEnemy.tscn" id="3_hf2di"]
+
+[node name="Testlevel2" type="Node2D" unique_id=556481811]
+
+[node name="Player" parent="." unique_id=165562969 instance=ExtResource("1_edk7u")]
+
+[node name="DummySpawner" type="Node2D" parent="." unique_id=643830453]
+position = Vector2(92, 0)
+script = ExtResource("2_43fjb")
+dummy_scene = ExtResource("3_hf2di")

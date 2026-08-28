@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/entities/enemies/CombatEnemy.tscn" id="1"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/enem (3).png" id="2"]
+
+[node name="RangedEnemy" instance=ExtResource("1")]
+combat_mode = 1
+max_health = 75.0
+move_speed = 105.0
+attack_damage = 7.0
+preferred_range = 145.0
+attack_cooldown = 1.5
+
+[node name="Sprite2D" parent="." index="1"]
+texture = ExtResource("2")

@@ -1,0 +1,4 @@
+[gd_scene load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/world/procedural_chunk.gd" id="1"]
+[node name="ProceduralChunk" type="Node2D"]
+script = ExtResource("1")
