@@ -54,6 +54,10 @@ func _generate_level() -> void:
 	camera.position_smoothing_speed = 8.0
 	player_instance.add_child(camera)
 
+	# Menú de Inventario
+	var inventory_menu := InventoryMenu.new()
+	add_child(inventory_menu)
+
 	# 2. Generar Chunks 1 a 4 con barreras y triggers
 	for i in range(1, TOTAL_CHUNKS + 1):
 		var chunk_pos_x := i * CHUNK_WIDTH

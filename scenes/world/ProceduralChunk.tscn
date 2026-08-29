@@ -8,10 +8,11 @@ script = ExtResource("1_chunk")
 
 [node name="GroundLayer" type="TileMapLayer" parent="."]
 tile_set = ExtResource("2_tileset")
+z_index = -10
 
 [node name="WallLayer" type="TileMapLayer" parent="."]
-z_index = 1
 tile_set = ExtResource("2_tileset")
+z_index = -9
 
 [node name="WallColliders" type="StaticBody2D" parent="."]
 collision_layer = 1

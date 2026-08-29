@@ -42,7 +42,6 @@ enum EffectType {
 @export var ranged_enemy_scene: PackedScene
 
 var _bodies_on_platform: Array = []
-var _spawned_enemies: Array[Node] = []
 
 @onready var visual: Polygon2D = $Visual
 @onready var collision: CollisionShape2D = $CollisionShape2D
@@ -134,17 +133,12 @@ func _apply_effect(body: Node) -> void:
 func _spawn_encounter() -> void:
 	if melee_enemy_scene == null or ranged_enemy_scene == null:
 		return
-	for enemy in _spawned_enemies:
-		if is_instance_valid(enemy):
-			return
-	_spawned_enemies.clear()
 	var melee_enemy := melee_enemy_scene.instantiate()
 	var ranged_enemy := ranged_enemy_scene.instantiate()
 	melee_enemy.global_position = global_position + Vector2(-45, 0)
 	ranged_enemy.global_position = global_position + Vector2(45, 0)
 	get_tree().current_scene.add_child(melee_enemy)
 	get_tree().current_scene.add_child(ranged_enemy)
-	_spawned_enemies = [melee_enemy, ranged_enemy]
 
 func _build_visual() -> void:
 	var half := platform_size / 2.0

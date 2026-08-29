@@ -1,4 +1,4 @@
-﻿## CustomizableWall.gd
+## CustomizableWall.gd
 ## Pared estática modificable con tamaño, color y colisión ajustables desde el Inspector.
 @tool
 class_name CustomizableWall
