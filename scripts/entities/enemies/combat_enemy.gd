@@ -47,21 +47,22 @@ func _physics_process(delta: float) -> void:
 		move_and_slide()
 		return
 	var distance := global_position.distance_to(target.global_position)
+	var has_line_of_sight := _has_clear_path(target)
 	if combat_mode == CombatMode.MELEE:
-		if distance > attack_range: _move_to(target.global_position)
+		if distance > attack_range or not has_line_of_sight: _move_to(target.global_position)
 		else:
 			velocity = Vector2.ZERO
-			_attack()
+			if has_line_of_sight: _attack()
 	else:
 		if distance < preferred_range * 0.72:
 			# Huye pero sigue disparando mientras se aleja
 			_move_to(global_position + (global_position - target.global_position).normalized() * 90.0)
-			_attack()
+			if has_line_of_sight: _attack()
 		elif distance > preferred_range:
 			_move_to(target.global_position)
 		else:
 			velocity = Vector2.ZERO
-			_attack()
+			if has_line_of_sight: _attack()
 	velocity += _get_separation_vector() * 40.0
 	move_and_slide()
 
@@ -116,10 +117,19 @@ func _nearest_player_to(position_to_check: Vector2) -> Node2D:
 	return closest
 
 func _move_to(destination: Vector2) -> void:
-	## Se conserva el agente para el NavMesh futuro; sin NavMesh el punto
-	## siguiente del agente puede ser (0,0), por eso se usa destino directo.
+	## El agente queda listo para regiones de navegación de futuras paredes.
 	navigation_agent.target_position = destination
-	velocity = global_position.direction_to(destination) * move_speed
+	var next_point := navigation_agent.get_next_path_position()
+	if not navigation_agent.is_navigation_finished():
+		velocity = global_position.direction_to(next_point) * move_speed
+	else:
+		velocity = global_position.direction_to(destination) * move_speed
+
+func _has_clear_path(other: Node2D) -> bool:
+	var query := PhysicsRayQueryParameters2D.create(global_position, other.global_position, 1)
+	query.exclude = [get_rid(), other.get_rid()]
+	var hit := get_world_2d().direct_space_state.intersect_ray(query)
+	return hit.is_empty()
 
 func _wander(delta: float) -> void:
 	if _idle_time > 0.0:

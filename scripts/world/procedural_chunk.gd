@@ -7,8 +7,10 @@ class_name ProceduralChunk
 extends Node2D
 
 const TILE_SIZE := 16
-const GRID_SIZE := 15
-const CHUNK_PIXEL_SIZE := GRID_SIZE * TILE_SIZE # 240px
+@export_range(7, 32) var grid_size: int = 15:
+	set(v):
+		grid_size = v
+		_rebuild_chunk()
 
 @export_group("Conexiones de Puertas")
 @export var door_left: bool = false:
@@ -101,8 +103,8 @@ func _build_tilemaps() -> void:
 	tilemap_ground.clear()
 	tilemap_walls.clear()
 
-	for y in range(GRID_SIZE):
-		for x in range(GRID_SIZE):
+	for y in range(grid_size):
+		for x in range(grid_size):
 			var tile_type := _get_tile_type(x, y)
 			var atlas_pos: Vector2i = ATLAS_MAP.get(tile_type, Vector2i(0, 0))
 			
@@ -113,61 +115,67 @@ func _build_tilemaps() -> void:
 
 func _get_tile_type(x: int, y: int) -> String:
 	# 4 Esquinas exteriores
-	if (x == 0 or x == 14) and (y == 0 or y == 14):
+	var last := grid_size - 1
+	var door_start := int((grid_size - 3) / 2)
+	var door_end := door_start + 2
+	if (x == 0 or x == last) and (y == 0 or y == last):
 		return "esquina_negra"
 
 	# Borde superior (y = 0)
 	if y == 0:
-		if door_top and (x >= 6 and x <= 8):
+		if door_top and (x >= door_start and x <= door_end):
 			return "puerta_rosa"
 		return "pared_top"
 
 	# Borde inferior (y = 14)
-	if y == 14:
-		if door_bottom and (x >= 6 and x <= 8):
+	if y == last:
+		if door_bottom and (x >= door_start and x <= door_end):
 			return "puerta_rosa"
 		return "pared_bottom"
 
 	# Borde izquierdo (x = 0)
 	if x == 0:
-		if door_left and (y >= 6 and y <= 8):
+		if door_left and (y >= door_start and y <= door_end):
 			return "puerta_rosa"
 		return "pared_left"
 
 	# Borde derecho (x = 14)
-	if x == 14:
-		if door_right and (y >= 6 and y <= 8):
+	if x == last:
+		if door_right and (y >= door_start and y <= door_end):
 			return "puerta_rosa"
 		return "pared_right"
 
 	# 4 Esquinas de terreno (anillo interior)
-	if (x == 1 or x == 13) and (y == 1 or y == 13):
+	if (x == 1 or x == last - 1) and (y == 1 or y == last - 1):
 		return "esquina_terreno"
 
 	# Anillo interior de terreno
 	if y == 1:
 		return "terreno_top"
-	if y == 13:
+	if y == last - 1:
 		return "terreno_bottom"
 	if x == 1:
 		return "terreno_left"
-	if x == 13:
+	if x == last - 1:
 		return "terreno_right"
 
 	# Centro del terreno (11x11)
 	return "terreno_centro"
 
 func _is_solid_wall(x: int, y: int) -> bool:
-	if (x == 0 or x == 14) and (y == 0 or y == 14):
+	var last := grid_size - 1
+	var door_start := int((grid_size - 3) / 2)
+	var door_end := door_start + 2
+	if (x == 0 or x == last) and (y == 0 or y == last):
 		return true
 	if y == 0:
-		return not (door_top and x >= 6 and x <= 8)
-	if y == 14:
-		return not (door_bottom and x >= 6 and x <= 8)
+		return not (door_top and x >= door_start and x <= door_end)
+	if y == last:
+		return not (door_bottom and x >= door_start and x <= door_end)
 	if x == 0:
-		return not (door_left and y >= 6 and y <= 8)
-	if x == 14:
-		return not (door_right and y >= 6 and y <= 8)
+		return not (door_left and y >= door_start and y <= door_end)
+	if x == last:
+		return not (door_right and y >= door_start and y <= door_end)
 	return false
 
 func _color_for_tile(type: String) -> Color:
@@ -192,34 +200,37 @@ func _build_collisions() -> void:
 	for child in wall_colliders.get_children():
 		child.queue_free()
 
-	# Colisiones perimetrales con hueco en las puertas (x/y = 6..8 -> 96..144 px)
+	var size_px := float(grid_size * TILE_SIZE)
+	var door_start_px := float(int((grid_size - 3) / 2) * TILE_SIZE)
+	var door_end_px := door_start_px + TILE_SIZE * 3.0
+	# Colisiones perimetrales con hueco de tres tiles en las puertas.
 	# Pared Superior (y=0)
 	if door_top:
-		_add_collider_rect(Rect2(0, 0, 96, 16))
-		_add_collider_rect(Rect2(144, 0, 96, 16))
+		_add_collider_rect(Rect2(0, 0, door_start_px, TILE_SIZE))
+		_add_collider_rect(Rect2(door_end_px, 0, size_px - door_end_px, TILE_SIZE))
 	else:
-		_add_collider_rect(Rect2(0, 0, 240, 16))
+		_add_collider_rect(Rect2(0, 0, size_px, TILE_SIZE))
 
-	# Pared Inferior (y=224)
+	# Pared Inferior
 	if door_bottom:
-		_add_collider_rect(Rect2(0, 224, 96, 16))
-		_add_collider_rect(Rect2(144, 224, 96, 16))
+		_add_collider_rect(Rect2(0, size_px - TILE_SIZE, door_start_px, TILE_SIZE))
+		_add_collider_rect(Rect2(door_end_px, size_px - TILE_SIZE, size_px - door_end_px, TILE_SIZE))
 	else:
-		_add_collider_rect(Rect2(0, 224, 240, 16))
+		_add_collider_rect(Rect2(0, size_px - TILE_SIZE, size_px, TILE_SIZE))
 
-	# Pared Izquierda (x=0)
+	# Pared Izquierda
 	if door_left:
-		_add_collider_rect(Rect2(0, 16, 16, 80))
-		_add_collider_rect(Rect2(0, 144, 16, 80))
+		_add_collider_rect(Rect2(0, TILE_SIZE, TILE_SIZE, door_start_px - TILE_SIZE))
+		_add_collider_rect(Rect2(0, door_end_px, TILE_SIZE, size_px - TILE_SIZE - door_end_px))
 	else:
-		_add_collider_rect(Rect2(0, 16, 16, 208))
+		_add_collider_rect(Rect2(0, TILE_SIZE, TILE_SIZE, size_px - TILE_SIZE * 2.0))
 
-	# Pared Derecha (x=224)
+	# Pared Derecha
 	if door_right:
-		_add_collider_rect(Rect2(224, 16, 16, 80))
-		_add_collider_rect(Rect2(224, 144, 16, 80))
+		_add_collider_rect(Rect2(size_px - TILE_SIZE, TILE_SIZE, TILE_SIZE, door_start_px - TILE_SIZE))
+		_add_collider_rect(Rect2(size_px - TILE_SIZE, door_end_px, TILE_SIZE, size_px - TILE_SIZE - door_end_px))
 	else:
-		_add_collider_rect(Rect2(224, 16, 16, 208))
+		_add_collider_rect(Rect2(size_px - TILE_SIZE, TILE_SIZE, TILE_SIZE, size_px - TILE_SIZE * 2.0))
 
 func _add_collider_rect(rect: Rect2) -> void:
 	var col := CollisionShape2D.new()
