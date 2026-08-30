@@ -185,14 +185,6 @@ func _color_for_tile(type: String) -> Color:
 		"terreno_right": return COLOR_TERRENO_RIGHT
 		_: return COLOR_TERRENO_CENTRO
 
-func _draw() -> void:
-	# Dibujado según la guía de colores (visible si TileMap no está presente o en editor)
-	for y in range(GRID_SIZE):
-		for x in range(GRID_SIZE):
-			var tile_type := _get_tile_type(x, y)
-			var color := _color_for_tile(tile_type)
-			draw_rect(Rect2(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE), color)
-
 func _build_collisions() -> void:
 	if not wall_colliders:
 		return

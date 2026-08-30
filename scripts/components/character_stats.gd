@@ -59,6 +59,7 @@ var item_healing_bonus_percent: float = 0.0
 var item_ranged_attack_range_bonus: float = 0.0
 var item_cast_range_bonus: float = 0.0
 var item_armor_bonus: float = 0.0
+var accessory_bonuses: Dictionary = {}
 
 var max_health: float
 var max_mana: float
@@ -172,6 +173,13 @@ func set_item_bonuses(bonuses: Dictionary) -> void:
 	item_armor_bonus = float(bonuses.get("armor", 0.0))
 	_recalculate()
 
+func set_accessory_bonuses(bonuses: Dictionary) -> void:
+	accessory_bonuses = bonuses.duplicate(true)
+	_recalculate()
+
+func _accessory_value(key: String) -> float:
+	return float(accessory_bonuses.get(key, 0.0))
+
 func set_base_move_speed(value: float) -> void:
 	base_move_speed = max(value, 0.0)
 	_recalculate()
@@ -191,28 +199,28 @@ func get_cooldown_duration(base_seconds: float, cooldown_tag: int) -> float:
 	return max(base_seconds, 0.0)
 
 func get_total_cooldown_reduction_percent() -> float:
-	return clampf(cooldown_reduction_percent + item_cooldown_reduction_percent, 0.0, 75.0)
+	return clampf(cooldown_reduction_percent + item_cooldown_reduction_percent + _accessory_value("cooldown_reduction_percent"), 0.0, 75.0)
 
 func get_total_strength() -> int:
-	return strength + item_strength
+	return strength + item_strength + int(_accessory_value("strength"))
 
 func get_total_intelligence() -> int:
-	return intelligence + item_intelligence
+	return intelligence + item_intelligence + int(_accessory_value("intelligence"))
 
 func get_total_agility() -> int:
-	return agility + item_agility
+	return agility + item_agility + int(_accessory_value("agility"))
 
 func get_total_resistance() -> int:
-	return resistance + item_resistance
+	return resistance + item_resistance + int(_accessory_value("resistance"))
 
 func get_total_healing_bonus_percent() -> float:
-	return max(healing_bonus_percent + item_healing_bonus_percent, -100.0)
+	return max(healing_bonus_percent + item_healing_bonus_percent + _accessory_value("healing_bonus_percent"), -100.0)
 
 func get_total_ranged_attack_range_bonus() -> float:
-	return ranged_attack_range_bonus + item_ranged_attack_range_bonus
+	return ranged_attack_range_bonus + item_ranged_attack_range_bonus + _accessory_value("ranged_attack_range")
 
 func get_total_cast_range_bonus() -> float:
-	return cast_range_bonus + item_cast_range_bonus
+	return cast_range_bonus + item_cast_range_bonus + _accessory_value("cast_range")
 
 ## El bono amplifica la curación realizada. Además, cada 1% agrega 0.02%
 ## de la vida máxima del sanador: los personajes con más vida lo aprovechan mejor.
@@ -258,16 +266,16 @@ func _physical_damage_multiplier() -> float:
 func _recalculate() -> void:
 	var old_max_health := max_health
 	var old_max_mana := max_mana
-	max_health = base_max_health + (strength + item_strength) * 10.0
-	max_mana = base_max_mana + (intelligence + item_intelligence) * 10.0
-	attack_speed = base_attack_speed * (1.0 + (agility + item_agility) * 0.01)
-	physical_damage = base_physical_damage + physical_damage_bonus + item_physical_damage_bonus
-	magic_damage = base_magic_damage + magic_damage_bonus + item_magic_damage_bonus
-	movement_speed = base_move_speed * (1.0 + (movement_speed_bonus_percent + item_movement_speed_bonus_percent) / 100.0)
-	armor = base_armor + armor_bonus + item_armor_bonus
+	max_health = base_max_health + (strength + item_strength + int(_accessory_value("strength"))) * 10.0
+	max_mana = base_max_mana + (intelligence + item_intelligence + int(_accessory_value("intelligence"))) * 10.0
+	attack_speed = base_attack_speed * (1.0 + (agility + item_agility + int(_accessory_value("agility"))) * 0.01)
+	physical_damage = base_physical_damage + physical_damage_bonus + item_physical_damage_bonus + _accessory_value("physical_damage")
+	magic_damage = base_magic_damage + magic_damage_bonus + item_magic_damage_bonus + _accessory_value("magic_damage")
+	movement_speed = base_move_speed * (1.0 + (movement_speed_bonus_percent + item_movement_speed_bonus_percent + _accessory_value("move_speed_percent")) / 100.0)
+	armor = base_armor + armor_bonus + item_armor_bonus + _accessory_value("armor")
 	armor_damage_reduction = max(armor, 0.0) / (max(armor, 0.0) + armor_constant)
-	health_regen = (resistance + item_resistance) * 0.5
-	mana_regen = (resistance + item_resistance) * 0.5
+	health_regen = (resistance + item_resistance + int(_accessory_value("resistance"))) * 0.5
+	mana_regen = (resistance + item_resistance + int(_accessory_value("resistance"))) * 0.5
 	ability_cooldown_multiplier = 1.0 - get_total_cooldown_reduction_percent() / 100.0
 	if old_max_health > 0.0 and max_health != old_max_health:
 		current_health += max_health - old_max_health

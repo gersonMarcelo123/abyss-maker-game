@@ -54,13 +54,29 @@ func _physics_process(delta: float) -> void:
 			_attack()
 	else:
 		if distance < preferred_range * 0.72:
+			# Huye pero sigue disparando mientras se aleja
 			_move_to(global_position + (global_position - target.global_position).normalized() * 90.0)
+			_attack()
 		elif distance > preferred_range:
 			_move_to(target.global_position)
 		else:
 			velocity = Vector2.ZERO
 			_attack()
+	velocity += _get_separation_vector() * 40.0
 	move_and_slide()
+
+func _get_separation_vector() -> Vector2:
+	var separation := Vector2.ZERO
+	var neighbors := 0
+	for enemy in get_tree().get_nodes_in_group("enemies"):
+		if enemy != self and enemy is Node2D and is_instance_valid(enemy):
+			var other_pos: Vector2 = (enemy as Node2D).global_position
+			var diff: Vector2 = global_position - other_pos
+			var dist: float = diff.length()
+			if dist < 24.0 and dist > 0.001:
+				separation += diff.normalized() * (1.0 - (dist / 24.0))
+				neighbors += 1
+	return separation.normalized() if neighbors > 0 else Vector2.ZERO
 
 func provoke(new_target: Node2D, duration: float = 3.0) -> void:
 	if is_instance_valid(new_target):

@@ -4,14 +4,15 @@
 class_name InventoryMenu
 extends CanvasLayer
 
-@export var panel_size: Vector2 = Vector2(140, 230)
+@export var panel_size: Vector2 = Vector2(116, 220)
 @export var panel_spacing: float = 8.0
-@export var slot_size: float = 30.0
+@export var slot_size: float = 21.0
 
 var _is_open := false
 var _root: Control
 var _sheets_container: HBoxContainer
 var _selected_slot: Dictionary = {}
+var _accessory_tooltip: AccessoryTooltip = null
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -41,6 +42,7 @@ func close() -> void:
 	_is_open = false
 	visible = false
 	_selected_slot.clear()
+	_clear_accessory_tooltip()
 	get_tree().paused = false
 
 func _build_ui() -> void:
@@ -54,24 +56,24 @@ func _build_ui() -> void:
 	var title := Label.new()
 	title.text = "INVENTARIO"
 	title.position = Vector2(12, 8)
-	title.add_theme_font_size_override("font_size", 18)
+	title.add_theme_font_size_override("font_size", 12)
 	title.add_theme_color_override("font_color", Color.WHITE)
 	_root.add_child(title)
 	var hint := Label.new()
 	hint.text = "I: cerrar · clic: mover · L2: tirar"
 	hint.position = Vector2(12, 29)
-	hint.add_theme_font_size_override("font_size", 11)
+	hint.add_theme_font_size_override("font_size", 8)
 	hint.add_theme_color_override("font_color", Color(0.75, 0.75, 0.75))
 	_root.add_child(hint)
 	var drop_button := Button.new()
 	drop_button.text = "Tirar seleccionado"
-	drop_button.position = Vector2(210, 8)
-	drop_button.size = Vector2(130, 27)
-	drop_button.add_theme_font_size_override("font_size", 10)
+	drop_button.position = Vector2(145, 6)
+	drop_button.size = Vector2(92, 19)
+	drop_button.add_theme_font_size_override("font_size", 7)
 	drop_button.pressed.connect(_drop_selected)
 	_root.add_child(drop_button)
 	_sheets_container = HBoxContainer.new()
-	_sheets_container.position = Vector2(12, 48)
+	_sheets_container.position = Vector2(8, 33)
 	_sheets_container.add_theme_constant_override("separation", int(panel_spacing))
 	_root.add_child(_sheets_container)
 
@@ -99,18 +101,48 @@ func _build_player_sheet(player: Node) -> Control:
 	box.add_theme_constant_override("separation", 2)
 	panel.add_child(box)
 	var stats: CharacterStats = player.stats
-	box.add_child(_label("Jugador %d" % (player.player_index + 1), 12, Color.WHITE))
-	box.add_child(_label("HP %d/%d  MP %d/%d  AS %.2f" % [stats.current_health, stats.max_health, stats.current_mana, stats.max_mana, stats.attack_speed], 8, Color(0.75, 0.85, 1.0)))
-	box.add_child(_label("STR %d INT %d AGI %d RES %d" % [stats.get_total_strength(), stats.get_total_intelligence(), stats.get_total_agility(), stats.get_total_resistance()], 8, Color(0.9, 0.85, 0.5)))
-	box.add_child(_label("FIS %.0f MAG %.0f ARM %.0f (%.0f%%)" % [stats.physical_damage, stats.magic_damage, stats.armor, stats.armor_damage_reduction * 100.0], 8, Color(0.72, 0.82, 0.95)))
-	box.add_child(_label("MOV %.0f HR %.1f MR %.1f" % [stats.movement_speed, stats.health_regen, stats.mana_regen], 8, Color(0.8, 0.8, 0.8)))
-	box.add_child(_label("CDR %.0f%% CUR +%.0f%%" % [stats.get_total_cooldown_reduction_percent(), stats.get_total_healing_bonus_percent()], 8, Color(0.72, 0.9, 0.75)))
-	box.add_child(_label("RATK +%.0f CAST +%.0f" % [stats.get_total_ranged_attack_range_bonus(), stats.get_total_cast_range_bonus()], 8, Color(0.95, 0.78, 0.55)))
-	box.add_child(_label("Activos (habilitados)", 9, Color(0.85, 0.9, 0.55)))
+	box.add_child(_label("J%d" % (player.player_index + 1), 9, Color.WHITE))
+	box.add_child(_label("HP %d MP %d AS %.1f" % [stats.current_health, stats.current_mana, stats.attack_speed], 6, Color(0.75, 0.85, 1.0)))
+	box.add_child(_label("S%d I%d A%d R%d" % [stats.get_total_strength(), stats.get_total_intelligence(), stats.get_total_agility(), stats.get_total_resistance()], 6, Color(0.9, 0.85, 0.5)))
+	box.add_child(_label("F%.0f M%.0f Ar%.0f" % [stats.physical_damage, stats.magic_damage, stats.armor], 6, Color(0.72, 0.82, 0.95)))
+	box.add_child(_label("Activos", 7, Color(0.85, 0.9, 0.55)))
 	box.add_child(_build_slot_grid(player, "active", 6, Color(0.25, 0.38, 0.26)))
-	box.add_child(_label("Almacenamiento (inactivo)", 9, Color(0.65, 0.65, 0.7)))
+	box.add_child(_label("Guardado", 7, Color(0.65, 0.65, 0.7)))
 	box.add_child(_build_slot_grid(player, "storage", 3, Color(0.25, 0.25, 0.3)))
+	box.add_child(_label("Accesorios", 7, Color(0.4, 0.8, 1.0)))
+	box.add_child(_build_accessory_grid(player))
 	return panel
+
+func _build_accessory_grid(player: Node) -> GridContainer:
+	var container := GridContainer.new()
+	container.columns = 5
+	for acc_name in Player.ACCESSORY_SLOTS:
+		var item: Dictionary = player.accessory_inventory.get(acc_name, {})
+		var icon := Button.new()
+		icon.custom_minimum_size = Vector2(18, 18)
+		icon.text = AccessoryPresentation.icon_for(item) if not item.is_empty() else "▫"
+		icon.add_theme_color_override("font_color", AccessoryPresentation.tier_color(item) if not item.is_empty() else Color(0.55, 0.55, 0.6))
+		icon.add_theme_stylebox_override("normal", AccessoryPresentation.tier_slot_style(item))
+		icon.add_theme_stylebox_override("hover", AccessoryPresentation.tier_slot_style(item, true))
+		icon.add_theme_stylebox_override("pressed", AccessoryPresentation.tier_slot_style(item, true))
+		icon.focus_mode = Control.FOCUS_NONE
+		icon.tooltip_text = acc_name
+		if not item.is_empty():
+			icon.mouse_filter = Control.MOUSE_FILTER_STOP
+			icon.mouse_entered.connect(func(): _show_accessory_tooltip(item, icon.global_position))
+			icon.mouse_exited.connect(_clear_accessory_tooltip)
+		container.add_child(icon)
+	return container
+
+func _show_accessory_tooltip(accessory: Dictionary, at_position: Vector2) -> void:
+	_clear_accessory_tooltip()
+	_accessory_tooltip = AccessoryTooltip.new()
+	_root.add_child(_accessory_tooltip)
+	_accessory_tooltip.show_accessory(accessory, at_position)
+
+func _clear_accessory_tooltip() -> void:
+	if is_instance_valid(_accessory_tooltip): _accessory_tooltip.queue_free()
+	_accessory_tooltip = null
 
 func _build_slot_grid(player: Node, slot_group: String, count: int, empty_color: Color) -> GridContainer:
 	var grid := GridContainer.new()

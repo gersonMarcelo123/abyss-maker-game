@@ -10,7 +10,7 @@ size = Vector2(26, 26)
 script = ExtResource("1")
 projectile_scene = ExtResource("2")
 collision_layer = 2
-collision_mask = 0
+collision_mask = 1
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("1")

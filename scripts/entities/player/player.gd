@@ -50,8 +50,10 @@ var _is_dead: bool = false
 var _last_hit_source_position: Vector2 = Vector2.INF
 const ACTIVE_INVENTORY_SLOTS := 6
 const STORAGE_INVENTORY_SLOTS := 3
+const ACCESSORY_SLOTS := ["Runa", "Manual", "Pulsera", "Lente", "Anillo"]
 var active_inventory: Array = []
 var storage_inventory: Array = []
+var accessory_inventory: Dictionary = {}
 
 func _ready() -> void:
 	add_to_group("players") # para que las plataformas de efectos lo detecten
@@ -59,7 +61,11 @@ func _ready() -> void:
 		active_inventory.append({})
 	for _slot in range(STORAGE_INVENTORY_SLOTS):
 		storage_inventory.append({})
+	for acc_name in ACCESSORY_SLOTS:
+		accessory_inventory[acc_name] = {}
+	accessory_inventory = GameState.get_accessories(player_index)
 	_refresh_active_item_bonuses()
+	refresh_accessory_bonuses()
 	stats.set_base_move_speed(move_speed)
 
 	attack_component.attack_type = (
@@ -163,6 +169,9 @@ func _on_target_changed(old_target, new_target) -> void:
 		new_target.set_targeted(true)
 
 func drop_inventory_item(slot_group: String, slot_index: int) -> bool:
+	if slot_group == "accessory":
+		# Los accesorios no se pueden soltar al suelo
+		return false
 	var inventory := _get_inventory_group(slot_group)
 	if slot_index < 0 or slot_index >= inventory.size() or inventory[slot_index].is_empty():
 		return false
@@ -278,6 +287,17 @@ func _refresh_active_item_bonuses() -> void:
 			total_bonuses[stat_name] = total_bonuses.get(stat_name, 0.0) + bonuses[stat_name]
 	stats.set_item_bonuses(total_bonuses)
 
+func refresh_accessory_bonuses() -> void:
+	var total_bonuses: Dictionary = {}
+	for slot_name in ACCESSORY_SLOTS:
+		var accessory: Dictionary = accessory_inventory.get(slot_name, {})
+		if accessory.is_empty():
+			continue
+		var bonuses: Dictionary = accessory.get("bonuses", {})
+		for stat_name in bonuses:
+			total_bonuses[stat_name] = total_bonuses.get(stat_name, 0.0) + bonuses[stat_name]
+	stats.set_accessory_bonuses(total_bonuses)
+
 func _try_pickup_nearby_item() -> bool:
 	var nearest_item: GroundItem = null
 	var nearest_distance: float = INF
@@ -353,7 +373,7 @@ func _revive() -> void:
 		body_placeholder.modulate = Color.WHITE
 	print("[P%d] ha revivido con %.0f/%.0f de vida" % [player_index, stats.current_health, stats.max_health])
 
-func _on_attack_windup_started(target: Node2D) -> void:
+func _on_attack_windup_started(_target: Node2D) -> void:
 	# TODO: acá va el disparo de la animación de "cargando ataque" cuando
 	# tengas los SpriteFrames reales — por ejemplo sprite.play("windup_" +
 	# _direction_to_8way(_last_aim_dir)). Por ahora no hace falta nada más:
