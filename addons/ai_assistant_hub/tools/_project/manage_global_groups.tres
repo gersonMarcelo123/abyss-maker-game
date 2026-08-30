@@ -1,10 +1,10 @@
-[gd_resource type="Resource" script_class="AIToolResource" load_steps=10 format=3 uid="uid://dp8y32ir8wi3b"]
+[gd_resource type="Resource" script_class="AIToolResource" format=3 uid="uid://dp8y32ir8wi3b"]
 
-[ext_resource type="Script" path="res://addons/ai_assistant_hub/tools/ai_tool_option.gd" id="1_26nfu"]
+[ext_resource type="Script" uid="uid://w7d85vrotqy0" path="res://addons/ai_assistant_hub/tools/ai_tool_option.gd" id="1_26nfu"]
 [ext_resource type="Resource" uid="uid://lh2xe6mgm3tu" path="res://addons/ai_assistant_hub/tools/tool_categories/project.tres" id="1_rtw56"]
-[ext_resource type="Script" path="res://addons/ai_assistant_hub/tools/ai_tool_parameter.gd" id="2_c7fkw"]
+[ext_resource type="Script" uid="uid://cjn5pjsvqv5km" path="res://addons/ai_assistant_hub/tools/ai_tool_parameter.gd" id="2_c7fkw"]
 [ext_resource type="Resource" uid="uid://8fxmxbtqcwmb" path="res://addons/ai_assistant_hub/tools/general_params_and_options/ai_tool_option_extended_prompt.tres" id="3_7svuf"]
-[ext_resource type="Script" path="res://addons/ai_assistant_hub/tools/ai_tool_resource.gd" id="3_dm202"]
+[ext_resource type="Script" uid="uid://b7jwbi5m30pmp" path="res://addons/ai_assistant_hub/tools/ai_tool_resource.gd" id="3_dm202"]
 [ext_resource type="Resource" uid="uid://ce6bugsk1fj5c" path="res://addons/ai_assistant_hub/tools/general_params_and_options/ai_tool_param_rationale.tres" id="5_d73fc"]
 
 [sub_resource type="Resource" id="Resource_6oq01"]
@@ -21,15 +21,12 @@ type = 3
 name = "group_name"
 description = "The group name to add or delete."
 required = true
-string_enum_valid_values = Array[String]([])
 
 [sub_resource type="Resource" id="Resource_pcgus"]
 script = ExtResource("2_c7fkw")
 type = 3
 name = "group_description"
 description = "Optional description when adding a group."
-required = false
-string_enum_valid_values = Array[String]([])
 
 [resource]
 script = ExtResource("3_dm202")
