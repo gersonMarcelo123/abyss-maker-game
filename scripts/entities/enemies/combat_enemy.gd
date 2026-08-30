@@ -10,8 +10,6 @@ enum CombatMode { MELEE, RANGED }
 @export var attack_range := 30.0
 @export var preferred_range := 150.0
 @export var attack_cooldown := 1.2
-@export var attack_windup := 0.18        # tiempo antes de aplicar el daño (segundos)
-@export var attack_recovery := 0.28      # tiempo de retroceso/desaceleración después del ataque
 @export var projectile_scene: PackedScene
 
 var health: float
@@ -24,7 +22,6 @@ var _dps_time := 0.0
 var _wander_destination := Vector2.ZERO
 var _wander_time := 0.0
 var _idle_time := 0.0
-var _is_attacking := false
 @onready var navigation_agent: NavigationAgent2D = $NavigationAgent2D
 @onready var health_fill: Polygon2D = $HealthBar/Fill
 @onready var health_bg: Polygon2D = $HealthBar/Background
@@ -45,24 +42,16 @@ func _physics_process(delta: float) -> void:
 	_agro_time = max(_agro_time - delta, 0.0)
 	if _agro_time <= 0.0: _forced_target = null
 	target = _choose_target()
-
-	# Si estamos en la secuencia de ataque, dejamos que la corutina controle la velocidad.
-	if _is_attacking:
-		move_and_slide()
-		return
-
 	if not is_instance_valid(target):
 		_wander(delta)
 		move_and_slide()
 		return
 	var distance := global_position.distance_to(target.global_position)
 	if combat_mode == CombatMode.MELEE:
-		if distance > attack_range:
-			_move_to(target.global_position)
+		if distance > attack_range: _move_to(target.global_position)
 		else:
-			# Iniciamos la secuencia de ataque (windup -> daño -> recovery).
-			if not _is_attacking:
-				_perform_melee_attack()
+			velocity = Vector2.ZERO
+			_attack()
 	else:
 		if distance < preferred_range * 0.72:
 			_move_to(global_position + (global_position - target.global_position).normalized() * 90.0)
@@ -130,28 +119,6 @@ func _wander(delta: float) -> void:
 		_wander_destination = global_position + Vector2(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)).normalized() * randf_range(30.0, 90.0)
 		_wander_time = randf_range(1.2, 2.8)
 	velocity = global_position.direction_to(_wander_destination) * move_speed * 0.55
-
-func _perform_melee_attack() -> void:
-	# Corutina: windup -> daño -> recovery (retroceso leve)
-	if _cooldown > 0.0 or not is_instance_valid(target): return
-	_is_attacking = true
-	_cooldown = attack_cooldown
-	# Windup: quedarse quieto
-	velocity = Vector2.ZERO
-	await get_tree().create_timer(attack_windup).timeout
-	# Aplicar daño
-	if is_instance_valid(target) and target.has_method("take_damage"):
-		target.take_damage(attack_damage, global_position, CharacterStats.DamageType.PHYSICAL)
-	# Recovery: retroceder un poco para evitar "pegarse" al objetivo
-	if is_instance_valid(target):
-		var back_dir = (global_position - target.global_position)
-		if back_dir.length() > 0.1:
-			back_dir = back_dir.normalized()
-			velocity = back_dir * move_speed * 0.6
-			await get_tree().create_timer(attack_recovery).timeout
-	# Fin de la secuencia
-	velocity = Vector2.ZERO
-	_is_attacking = false
 
 func _attack() -> void:
 	if _cooldown > 0.0: return
