@@ -38,6 +38,8 @@ func _ready() -> void:
 	health_bg.color = Color(0, 0, 0, 0.7)
 	_update_health_bar()
 
+var _strafe_direction := 1.0
+
 func _physics_process(delta: float) -> void:
 	_cooldown = max(_cooldown - delta, 0.0)
 	_attack_lock_time = max(_attack_lock_time - delta, 0.0)
@@ -59,21 +61,27 @@ func _physics_process(delta: float) -> void:
 		move_and_slide()
 		return
 	if combat_mode == CombatMode.MELEE:
-		if distance > attack_range or not has_line_of_sight: _move_to(target.global_position)
-		else:
-			_handle_ranged_positioning(target)
-			if has_line_of_sight: _attack()
-	else:
-		if distance < preferred_range * 0.72:
-			# Huye pero sigue disparando mientras se aleja
-			_move_to(global_position + (global_position - target.global_position).normalized() * 90.0)
-			if has_line_of_sight: _attack()
-		elif distance > preferred_range:
+		if distance > attack_range or not has_line_of_sight:
 			_move_to(target.global_position)
 		else:
 			velocity = Vector2.ZERO
-			if has_line_of_sight: _attack()
-	velocity += _get_separation_vector() * 40.0
+			if has_line_of_sight:
+				_attack()
+	else:
+		if distance < preferred_range * 0.55:
+			# Se aleja si está demasiado cerca
+			_move_to(global_position + (global_position - target.global_position).normalized() * 90.0)
+			if has_line_of_sight and _cooldown <= 0.0:
+				_attack()
+		elif distance > preferred_range * 1.15:
+			# Se acerca si está muy lejos
+			_move_to(target.global_position)
+		else:
+			# En rango óptimo de combate: aplica comportamiento táctico (rodear, mantener posición o preparar)
+			_handle_ranged_positioning(target)
+			if has_line_of_sight and _cooldown <= 0.0:
+				_attack()
+	velocity += _get_separation_vector() * 35.0
 	move_and_slide()
 
 func _get_separation_vector() -> Vector2:
@@ -108,7 +116,7 @@ func take_damage(amount: float, source_position: Vector2 = Vector2.INF, _damage_
 		queue_free()
 
 func _drop_rewards() -> void:
-	var gold_amount := randi_range(4, 8) * max(level, 1)
+	var gold_amount: int = randi_range(4, 8) * max(level, 1)
 	GameState.add_gold(gold_amount)
 	_show_text("+%d oro" % gold_amount, Color(1.0, 0.82, 0.15), Vector2(0, -78))
 	var scraps: Array[String] = ["Espada mellada", "Casco agrietado", "Jarra quebrada", "Plato fisurado", "Azulejo partido", "Silla desvencijada", "Mesa quemada", "Baúl desvencijado", "Farol roto", "Balanza desajustada", "Candado forzado", "Caldero perforado", "Fuelle rasgado", "Estribo partido", "Rueda astillada"]
@@ -144,13 +152,8 @@ func _nearest_player_to(position_to_check: Vector2) -> Node2D:
 	return closest
 
 func _move_to(destination: Vector2) -> void:
-	## El agente queda listo para regiones de navegación de futuras paredes.
-	navigation_agent.target_position = destination
-	var next_point := navigation_agent.get_next_path_position()
-	if not navigation_agent.is_navigation_finished():
-		velocity = global_position.direction_to(next_point) * move_speed
-	else:
-		velocity = global_position.direction_to(destination) * move_speed
+	# Movimiento directo hacia destino evitando problemas de NavMesh nulo
+	velocity = global_position.direction_to(destination) * move_speed
 
 func _has_clear_path(other: Node2D) -> bool:
 	var query := PhysicsRayQueryParameters2D.create(global_position, other.global_position, 1)
@@ -179,6 +182,7 @@ func _attack() -> void:
 	_attack_lock_time = max(attack_lock_duration, 0.0)
 	if combat_mode == CombatMode.RANGED:
 		_ranged_reposition_mode = randi_range(0, 2)
+		_strafe_direction = 1.0 if randf() > 0.5 else -1.0
 	if combat_mode == CombatMode.RANGED and projectile_scene:
 		var projectile := projectile_scene.instantiate()
 		projectile.target = target
@@ -190,14 +194,18 @@ func _attack() -> void:
 		target.take_damage(attack_damage, global_position, CharacterStats.DamageType.PHYSICAL)
 
 func _handle_ranged_positioning(current_target: Node2D) -> void:
-	# Tras atacar: rodea, conserva ángulo, o ajusta la distancia para el próximo tiro.
+	# 3 comportamientos estables tras atacar:
+	# 0: Rodear suavemente al enemigo / buscar otro ángulo sin salirse de rango
+	# 1: Mantener posición y preparar ataque
+	# 2: Mantener distancia
 	if _ranged_reposition_mode == 0:
-		var around := (current_target.global_position - global_position).normalized().rotated(PI * 0.5) * 70.0
-		_move_to(global_position + around)
+		var dir_to_target := (current_target.global_position - global_position).normalized()
+		var tangent := dir_to_target.orthogonal() * _strafe_direction
+		velocity = tangent * move_speed * 0.65
 	elif _ranged_reposition_mode == 1:
 		velocity = Vector2.ZERO
 	else:
-		_move_to(current_target.global_position)
+		velocity = Vector2.ZERO
 
 func set_targeted(value: bool) -> void:
 	modulate = Color(1.2, 1.2, 0.6) if value else Color.WHITE

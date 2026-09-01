@@ -154,8 +154,10 @@ func _spawn_player(start_center: Vector2) -> void:
 	camera.position_smoothing_enabled = true
 	camera.position_smoothing_speed = 8.0
 	player_instance.add_child(camera)
-	add_child(InventoryMenu.new())
-	add_child(EconomyHUD.new())
+	var inv_class := preload("res://scripts/ui/inventory_menu.gd")
+	add_child(inv_class.new())
+	var eco_class := preload("res://scripts/ui/economy_hud.gd")
+	add_child(eco_class.new())
 
 func _create_teleport(at_position: Vector2) -> void:
 	_teleport_instance = return_teleport_scene.instantiate() as Node2D

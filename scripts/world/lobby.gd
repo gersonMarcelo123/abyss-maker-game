@@ -40,21 +40,23 @@ func _ready() -> void:
 		chest.position = Vector2(200, 105)
 		add_child(chest)
 
-	# 4. Menú de Inventario
-	var inventory_menu := InventoryMenu.new()
-	add_child(inventory_menu)
-	var economy_hud := EconomyHUD.new()
+	# 4. Menú de Inventario y Economía
+	var inventory_menu_class := preload("res://scripts/ui/inventory_menu.gd")
+	add_child(inventory_menu_class.new())
+	var economy_hud_class := preload("res://scripts/ui/economy_hud.gd")
+	var economy_hud = economy_hud_class.new()
 	economy_hud.show_materials = true
 	add_child(economy_hud)
 
 	# Seis plataformas pisables: cinco crean un tipo de artefacto y una vacía el baúl.
+	var forge_class := preload("res://scripts/world/artifact_forge_platform.gd")
 	var forge_types: Array[String] = ["Runa", "Libreta", "Pulsera", "Lente", "Anillo"]
 	for index in range(forge_types.size()):
-		var forge := ArtifactForgePlatform.new()
+		var forge = forge_class.new()
 		forge.artifact_type = forge_types[index]
 		forge.position = Vector2(55 + index * 72, 310)
 		add_child(forge)
-	var clear_forge := ArtifactForgePlatform.new()
+	var clear_forge = forge_class.new()
 	clear_forge.clear_chest = true
 	clear_forge.position = Vector2(200, 365)
 	add_child(clear_forge)

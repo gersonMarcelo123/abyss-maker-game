@@ -29,5 +29,15 @@ func _ready() -> void:
 func _on_body_entered(body: Node2D) -> void:
 	if not _armed or not body.is_in_group("players"): return
 	_armed = false
-	if clear_chest: GameState.clear_artifact_chest()
-	else: GameState.add_artifact(ArtifactFactory.create(artifact_type))
+	if clear_chest:
+		GameState.clear_artifact_chest()
+		_show_feedback("¡Baúl vaciado!", Color(1.0, 0.4, 0.4))
+	else:
+		var item: Dictionary = ArtifactFactory.create(artifact_type)
+		GameState.add_artifact(item)
+		_show_feedback("+%s (T%d)" % [artifact_type, int(item.get("tier", 1))], Color(0.4, 0.8, 1.0))
+
+func _show_feedback(text_value: String, text_color: Color) -> void:
+	var indicator := FloatingCombatText.new()
+	add_child(indicator)
+	indicator.show_value(text_value, text_color, Vector2(0, -32))

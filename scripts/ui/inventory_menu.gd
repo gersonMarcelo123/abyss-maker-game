@@ -76,9 +76,12 @@ func _build_ui() -> void:
 	_root.add_child(hint)
 	var loot_button := Button.new()
 	loot_button.text = "Botín"
-	loot_button.position = Vector2(145, 6)
-	loot_button.size = Vector2(60, 19)
-	loot_button.add_theme_font_size_override("font_size", 8)
+	loot_button.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	loot_button.offset_left = -76
+	loot_button.offset_top = 8
+	loot_button.offset_right = -14
+	loot_button.offset_bottom = 28
+	loot_button.add_theme_font_size_override("font_size", 9)
 	loot_button.pressed.connect(func(): _show_loot = not _show_loot; _refresh_loot_panel())
 	_root.add_child(loot_button)
 	_sheets_container = HBoxContainer.new()
@@ -99,21 +102,36 @@ func _refresh_loot_panel() -> void:
 	_loot_panel = null
 	if not _show_loot: return
 	var panel := PanelContainer.new()
-	panel.position = Vector2(214, 32)
-	panel.custom_minimum_size = Vector2(230, 120)
+	panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	panel.offset_left = -230
+	panel.offset_top = 34
+	panel.offset_right = -14
+	panel.offset_bottom = 240
+	panel.custom_minimum_size = Vector2(210, 100)
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.06, 0.08, 0.12, 0.96)
 	style.set_border_width_all(1)
 	style.border_color = Color(0.55, 0.6, 0.68)
+	style.set_corner_radius_all(4)
+	style.content_margin_left = 6
+	style.content_margin_right = 6
+	style.content_margin_top = 6
+	style.content_margin_bottom = 6
 	panel.add_theme_stylebox_override("panel", style)
+	var scroll := ScrollContainer.new()
+	panel.add_child(scroll)
 	var rows := VBoxContainer.new()
-	panel.add_child(rows)
-	rows.add_child(_label("Botín", 10, Color(0.95, 0.84, 0.45)))
-	if GameState.materials.is_empty():
+	rows.add_theme_constant_override("separation", 2)
+	scroll.add_child(rows)
+	rows.add_child(_label("PIEZAS DE CHATARRA (BOTÍN)", 9, Color(0.95, 0.84, 0.45)))
+	var has_items := false
+	for material_name in GameState.materials:
+		var count: int = int(GameState.materials[material_name])
+		if count > 0:
+			has_items = true
+			rows.add_child(_label("%s ×%d" % [material_name, count], 8, Color.WHITE))
+	if not has_items:
 		rows.add_child(_label("Aún no tienes chatarra.", 8, Color(0.7, 0.7, 0.75)))
-	else:
-		for material_name in GameState.materials:
-			rows.add_child(_label("%s ×%d" % [material_name, GameState.materials[material_name]], 8, Color.WHITE))
 	_root.add_child(panel)
 	_loot_panel = panel
 

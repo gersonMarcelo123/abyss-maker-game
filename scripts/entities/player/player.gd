@@ -48,6 +48,9 @@ var _last_aim_dir: Vector2 = Vector2.DOWN
 var _state: FacingState = FacingState.IDLE
 var _is_dead: bool = false
 var _last_hit_source_position: Vector2 = Vector2.INF
+var _auto_attack_engaged: bool = false
+var _last_attack_press_time: float = -10.0
+var _death_knockback_velocity: Vector2 = Vector2.ZERO
 const ACTIVE_INVENTORY_SLOTS := 6
 const STORAGE_INVENTORY_SLOTS := 3
 const ACCESSORY_SLOTS := ["Runa", "Libreta", "Pulsera", "Lente", "Anillo"]
@@ -91,8 +94,14 @@ func _ready() -> void:
 	if status_bar:
 		status_bar.bind(stats)
 
-func _physics_process(_delta: float) -> void:
+func _physics_process(delta: float) -> void:
 	if _is_dead:
+		if _death_knockback_velocity.length() > 2.0:
+			velocity = _death_knockback_velocity
+			_death_knockback_velocity = _death_knockback_velocity.move_toward(Vector2.ZERO, delta * 320.0)
+			move_and_slide()
+		else:
+			velocity = Vector2.ZERO
 		if player_input.is_just_pressed("revive"):
 			_revive()
 		return
@@ -100,36 +109,49 @@ func _physics_process(_delta: float) -> void:
 	_handle_menu_input()
 
 	var move_dir := player_input.get_move_vector()
-	var is_holding_attack := player_input.is_pressed("attack")
 	var is_moving_manually := move_dir != Vector2.ZERO
+	var current_time: float = Time.get_ticks_msec() / 1000.0
+
+	# Al pulsar clic derecho / R2 activa la acción de atacar.
+	# Doble pulsación rápida cancela la acción.
+	if player_input.is_just_pressed("attack"):
+		if _try_pickup_nearby_item():
+			_auto_attack_engaged = false
+			attack_component.cancel()
+		elif _auto_attack_engaged and (current_time - _last_attack_press_time) < 0.38:
+			# Doble pulsación: cancelar acción de atacar
+			_auto_attack_engaged = false
+			attack_component.cancel()
+		else:
+			# Una sola pulsación: activa caminar y atacar al objetivo
+			_auto_attack_engaged = true
+		_last_attack_press_time = current_time
+
+	if player_input.is_just_pressed("cancel_attack"):
+		_auto_attack_engaged = false
+		attack_component.cancel()
 
 	var aim_dir := player_input.get_aim_vector(self)
 	if aim_dir != Vector2.ZERO:
 		_last_aim_dir = aim_dir
 
-	# No cambiar de objetivo mientras se mantiene pulsado el botón de atacar
 	var target: Node2D = null
-	if is_holding_attack and is_instance_valid(target_selector.current_target):
+	if _auto_attack_engaged and is_instance_valid(target_selector.current_target):
 		target = target_selector.current_target
 	else:
 		target = target_selector.update(global_position, aim_dir)
 
 	if not is_instance_valid(target):
 		target = null
+		if _auto_attack_engaged and not is_instance_valid(target_selector.current_target):
+			_auto_attack_engaged = false
 
-	# Te puedes mover mientras mantienes atacar pero no atacas. Al dejar de moverte, ataca/persigue.
-	var want_attack := is_holding_attack and not is_moving_manually
+	# Te puedes mover manualmente con WASD/palanca izquierda pero no puedes atacar y moverte a la vez.
+	# Al moverte, dejas de atacar. Al dejar de moverte, continúa la acción de atacar.
 	if is_moving_manually and attack_component.is_attacking:
 		attack_component.cancel()
 
-	## El objeto se recoge estando encima y pulsando ataque en CUALQUIER
-	## dirección. Solo se prioriza atacar cuando el enemigo ya está a rango.
-	if player_input.is_just_pressed("attack") and _try_pickup_nearby_item():
-		want_attack = false
-		attack_component.cancel()
-	if player_input.is_just_pressed("cancel_attack"):
-		attack_component.cancel()
-		want_attack = false
+	var want_attack := _auto_attack_engaged and not is_moving_manually and target != null
 
 	var must_approach := attack_component.process_attack(self, target, want_attack)
 
@@ -336,37 +358,26 @@ func _on_died() -> void:
 	if _is_dead:
 		return
 	_is_dead = true
-	velocity = Vector2.ZERO
 	attack_component.cancel()
 	target_selector.clear_target()
+	_auto_attack_engaged = false
 
-	# Dirección OPUESTA a quien causó la muerte. Si no sabemos de dónde vino
-	# el golpe (source_position nunca se asignó), empuja hacia abajo por
-	# defecto en vez de fallar.
+	# Dirección OPUESTA a quien causó la muerte.
 	var direction := Vector2.DOWN
 	if _last_hit_source_position != Vector2.INF:
 		var away := global_position - _last_hit_source_position
 		if away.length() > 1.0:
 			direction = away.normalized()
 
-	var destination := global_position + direction * knockback_distance
-	print("[P%d] ha muerto — empujado hacia %s, pulsa U para revivir ahí" % [player_index, destination])
-
-	var tween := create_tween()
-	tween.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	tween.tween_property(self, "global_position", destination, knockback_duration)
+	_death_knockback_velocity = direction * (knockback_distance / maxf(knockback_duration, 0.1))
 
 	if body_placeholder:
 		body_placeholder.modulate = Color(0.35, 0.35, 0.35) # gris = caído
 
-## Revive al personaje EN EL MISMO LUGAR donde quedó su cadáver (no hace
-## falta moverlo: ya está ahí desde el empujón). Por ahora la revive el
-## propio jugador pulsando su tecla U — es la base para, más adelante,
-## exigir que sea OTRO jugador el que se acerque y pulse la suya para
-## revivir a un aliado (habría que chequear distancia a otros Player en
-## vez de leer el propio player_input).
+## Revive al personaje EN EL MISMO LUGAR donde quedó su cadáver.
 func _revive() -> void:
 	_is_dead = false
+	_death_knockback_velocity = Vector2.ZERO
 	stats.current_health = stats.max_health * revive_health_ratio
 	stats.health_changed.emit(stats.current_health, stats.max_health)
 	if body_placeholder:
