@@ -1,9 +1,9 @@
 class_name EconomyHUD
 extends CanvasLayer
 
-@export var show_materials := false
+@export var show_crystals := false
 var _gold_label: Label
-var _materials_label: Label
+var _crystals_label: Label
 var _panel: PanelContainer
 
 func _ready() -> void:
@@ -25,7 +25,7 @@ func _ready() -> void:
 	_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	_panel.grow_horizontal = Control.GROW_DIRECTION_END
 	_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	
+
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.05, 0.07, 0.11, 0.82)
 	style.set_corner_radius_all(4)
@@ -46,22 +46,17 @@ func _ready() -> void:
 	_gold_label.add_theme_color_override("font_color", Color(1.0, 0.84, 0.2))
 	container.add_child(_gold_label)
 
-	_materials_label = Label.new()
-	_materials_label.add_theme_font_size_override("font_size", 9)
-	_materials_label.add_theme_color_override("font_color", Color(0.85, 0.9, 0.95))
-	container.add_child(_materials_label)
+	_crystals_label = Label.new()
+	_crystals_label.add_theme_font_size_override("font_size", 9)
+	_crystals_label.add_theme_color_override("font_color", Color(0.4, 0.85, 1.0))
+	container.add_child(_crystals_label)
 
 	GameState.gold_changed.connect(_refresh)
-	GameState.materials_changed.connect(_refresh)
+	GameState.crystals_changed.connect(_refresh)
 	_refresh()
 
 func _refresh(_ignored: Variant = null) -> void:
 	_gold_label.text = "Oro: %d" % GameState.gold
-	_materials_label.visible = show_materials
-	if show_materials:
-		var parts: Array[String] = []
-		for material_name in GameState.materials:
-			var count: int = int(GameState.materials[material_name])
-			if count > 0:
-				parts.append("%s ×%d" % [material_name, count])
-		_materials_label.text = "Materiales: " + (", ".join(parts) if not parts.is_empty() else "Ninguno")
+	_crystals_label.visible = show_crystals
+	if show_crystals:
+		_crystals_label.text = "Cristales: %d" % GameState.crystals

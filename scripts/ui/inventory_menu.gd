@@ -125,11 +125,11 @@ func _refresh_loot_panel() -> void:
 	scroll.add_child(rows)
 	rows.add_child(_label("PIEZAS DE CHATARRA (BOTÍN)", 9, Color(0.95, 0.84, 0.45)))
 	var has_items := false
-	for material_name in GameState.materials:
-		var count: int = int(GameState.materials[material_name])
+	for scrap_name in GameState.scrap:
+		var count: int = int(GameState.scrap[scrap_name])
 		if count > 0:
 			has_items = true
-			rows.add_child(_label("%s ×%d" % [material_name, count], 8, Color.WHITE))
+			rows.add_child(_label("%s ×%d" % [scrap_name, count], 8, Color.WHITE))
 	if not has_items:
 		rows.add_child(_label("Aún no tienes chatarra.", 8, Color(0.7, 0.7, 0.75)))
 	_root.add_child(panel)

@@ -27,7 +27,7 @@ func get_item_data() -> Dictionary:
 
 func try_pickup(player: Node) -> bool:
 	if loot_kind == "material":
-		GameState.add_material(material_name, 1)
+		GameState.add_scrap(material_name, 1)
 		queue_free()
 		return true
 	if not player.has_method("add_inventory_item"):

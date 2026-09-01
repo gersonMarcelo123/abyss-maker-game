@@ -45,7 +45,7 @@ func _ready() -> void:
 	add_child(inventory_menu_class.new())
 	var economy_hud_class := preload("res://scripts/ui/economy_hud.gd")
 	var economy_hud = economy_hud_class.new()
-	economy_hud.show_materials = true
+	economy_hud.show_crystals = false  # In the lobby only gold is shown.
 	add_child(economy_hud)
 
 	# Seis plataformas pisables: cinco crean un tipo de artefacto y una vacía el baúl.
@@ -97,6 +97,6 @@ func _create_teleport(target_scene: String, label_text: String) -> Area2D:
 	area.body_entered.connect(func(body: Node2D):
 		if body.is_in_group("players"):
 			get_tree().paused = false
-			get_tree().change_scene_to_file(target_scene)
+			get_tree().call_deferred("change_scene_to_file", target_scene)
 	)
 	return area
