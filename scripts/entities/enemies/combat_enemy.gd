@@ -10,6 +10,8 @@ enum CombatMode { MELEE, RANGED }
 @export var attack_range := 30.0
 @export var preferred_range := 150.0
 @export var attack_cooldown := 1.2
+@export var attack_lock_duration := 0.5
+@export var level := 1
 @export var projectile_scene: PackedScene
 
 var health: float
@@ -22,12 +24,15 @@ var _dps_time := 0.0
 var _wander_destination := Vector2.ZERO
 var _wander_time := 0.0
 var _idle_time := 0.0
+var _attack_lock_time := 0.0
+var _ranged_reposition_mode := 0
 @onready var navigation_agent: NavigationAgent2D = $NavigationAgent2D
 @onready var health_fill: Polygon2D = $HealthBar/Fill
 @onready var health_bg: Polygon2D = $HealthBar/Background
 
 func _ready() -> void:
 	add_to_group("enemies")
+	level = max(level, GameState.level)
 	health = max_health
 	health_bg.polygon = _rect(34, 4)
 	health_bg.color = Color(0, 0, 0, 0.7)
@@ -35,6 +40,7 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	_cooldown = max(_cooldown - delta, 0.0)
+	_attack_lock_time = max(_attack_lock_time - delta, 0.0)
 	_dps_time += delta
 	if _dps_time >= 1.0:
 		_dps_time = 0.0
@@ -48,10 +54,14 @@ func _physics_process(delta: float) -> void:
 		return
 	var distance := global_position.distance_to(target.global_position)
 	var has_line_of_sight := _has_clear_path(target)
+	if _attack_lock_time > 0.0:
+		velocity = Vector2.ZERO
+		move_and_slide()
+		return
 	if combat_mode == CombatMode.MELEE:
 		if distance > attack_range or not has_line_of_sight: _move_to(target.global_position)
 		else:
-			velocity = Vector2.ZERO
+			_handle_ranged_positioning(target)
 			if has_line_of_sight: _attack()
 	else:
 		if distance < preferred_range * 0.72:
@@ -93,7 +103,24 @@ func take_damage(amount: float, source_position: Vector2 = Vector2.INF, _damage_
 		var provoking_player := _nearest_player_to(source_position)
 		if provoking_player: provoke(provoking_player, 4.0)
 	_update_health_bar()
-	if health <= 0.0: queue_free()
+	if health <= 0.0:
+		_drop_rewards()
+		queue_free()
+
+func _drop_rewards() -> void:
+	var gold_amount := randi_range(4, 8) * max(level, 1)
+	GameState.add_gold(gold_amount)
+	_show_text("+%d oro" % gold_amount, Color(1.0, 0.82, 0.15), Vector2(0, -78))
+	var scraps: Array[String] = ["Espada mellada", "Casco agrietado", "Jarra quebrada", "Plato fisurado", "Azulejo partido", "Silla desvencijada", "Mesa quemada", "Baúl desvencijado", "Farol roto", "Balanza desajustada", "Candado forzado", "Caldero perforado", "Fuelle rasgado", "Estribo partido", "Rueda astillada"]
+	var scrap := preload("res://scenes/items/GroundItem.tscn").instantiate() as GroundItem
+	scrap.global_position = global_position + Vector2(randf_range(-10, 10), randf_range(-10, 10))
+	scrap.display_name = str(scraps.pick_random())
+	scrap.item_id = "scrap_" + scrap.display_name.to_lower().replace(" ", "_")
+	scrap.short_name = "Botín"
+	scrap.loot_kind = "material"
+	scrap.material_name = scrap.display_name
+	scrap.color = Color(0.55, 0.58, 0.62)
+	get_tree().current_scene.add_child(scrap)
 
 func _choose_target() -> Node2D:
 	if is_instance_valid(_forced_target): return _forced_target
@@ -149,6 +176,9 @@ func _wander(delta: float) -> void:
 func _attack() -> void:
 	if _cooldown > 0.0: return
 	_cooldown = attack_cooldown
+	_attack_lock_time = max(attack_lock_duration, 0.0)
+	if combat_mode == CombatMode.RANGED:
+		_ranged_reposition_mode = randi_range(0, 2)
 	if combat_mode == CombatMode.RANGED and projectile_scene:
 		var projectile := projectile_scene.instantiate()
 		projectile.target = target
@@ -158,6 +188,16 @@ func _attack() -> void:
 		get_tree().current_scene.add_child(projectile)
 	elif target.has_method("take_damage"):
 		target.take_damage(attack_damage, global_position, CharacterStats.DamageType.PHYSICAL)
+
+func _handle_ranged_positioning(current_target: Node2D) -> void:
+	# Tras atacar: rodea, conserva ángulo, o ajusta la distancia para el próximo tiro.
+	if _ranged_reposition_mode == 0:
+		var around := (current_target.global_position - global_position).normalized().rotated(PI * 0.5) * 70.0
+		_move_to(global_position + around)
+	elif _ranged_reposition_mode == 1:
+		velocity = Vector2.ZERO
+	else:
+		_move_to(current_target.global_position)
 
 func set_targeted(value: bool) -> void:
 	modulate = Color(1.2, 1.2, 0.6) if value else Color.WHITE

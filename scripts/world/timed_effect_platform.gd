@@ -48,6 +48,7 @@ var _bodies_on_platform: Array = []
 @onready var timer: Timer = $Timer
 
 func _ready() -> void:
+	collision_mask = 2
 	# La forma de colisión viene de un sub_resource compartido por todas
 	# las instancias de la escena; se duplica para que cada plataforma
 	# pueda tener su propio platform_size sin afectar a las demás.

@@ -9,6 +9,8 @@ extends Node2D
 @export var color: Color = Color(0.95, 0.8, 0.25)
 @export var pickup_range: float = 26.0
 @export var bonuses: Dictionary = {}
+@export var loot_kind := "item"
+@export var material_name := ""
 
 func _ready() -> void:
 	add_to_group("ground_items")
@@ -24,6 +26,10 @@ func get_item_data() -> Dictionary:
 	return {"id": item_id, "name": display_name, "short_name": short_name, "bonuses": bonuses.duplicate(true)}
 
 func try_pickup(player: Node) -> bool:
+	if loot_kind == "material":
+		GameState.add_material(material_name, 1)
+		queue_free()
+		return true
 	if not player.has_method("add_inventory_item"):
 		return false
 	if player.add_inventory_item(get_item_data()):

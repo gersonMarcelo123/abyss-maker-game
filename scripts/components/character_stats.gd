@@ -28,7 +28,7 @@ enum CooldownTag { REDUCIBLE_ABILITY, FIXED_ITEM, FIXED_SYSTEM }
 @export_group("Base (antes de atributos, buffs e ítems)")
 @export var base_max_health: float = 100.0
 @export var base_max_mana: float = 100.0
-@export var base_attack_speed: float = 1.2
+@export var base_attack_speed: float = 1.0
 @export var base_physical_damage: float = 10.0
 @export var base_magic_damage: float = 0.0
 @export var base_move_speed: float = 160.0
@@ -266,9 +266,9 @@ func _physical_damage_multiplier() -> float:
 func _recalculate() -> void:
 	var old_max_health := max_health
 	var old_max_mana := max_mana
-	max_health = base_max_health + (strength + item_strength + int(_accessory_value("strength"))) * 10.0
-	max_mana = base_max_mana + (intelligence + item_intelligence + int(_accessory_value("intelligence"))) * 10.0
-	attack_speed = base_attack_speed * (1.0 + (agility + item_agility + int(_accessory_value("agility"))) * 0.01)
+	max_health = base_max_health + (strength + item_strength + int(_accessory_value("strength"))) * 10.0 + _accessory_value("max_health")
+	max_mana = base_max_mana + (intelligence + item_intelligence + int(_accessory_value("intelligence"))) * 10.0 + _accessory_value("max_mana")
+	attack_speed = base_attack_speed * (1.0 + (agility + item_agility + int(_accessory_value("agility"))) * 0.01) + _accessory_value("attack_speed")
 	physical_damage = base_physical_damage + physical_damage_bonus + item_physical_damage_bonus + _accessory_value("physical_damage")
 	magic_damage = base_magic_damage + magic_damage_bonus + item_magic_damage_bonus + _accessory_value("magic_damage")
 	movement_speed = base_move_speed * (1.0 + (movement_speed_bonus_percent + item_movement_speed_bonus_percent + _accessory_value("move_speed_percent")) / 100.0)

@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3 uid="uid://f727ul3cjn1m"]
+[gd_scene load_steps=12 format=3 uid="uid://f727ul3cjn1m"]
 
 [ext_resource type="PackedScene" uid="uid://djp6athdlnl4h" path="res://scenes/entities/player/Player.tscn" id="1_k64b4"]
 [ext_resource type="Script" uid="uid://bu5ieh8sw1w3g" path="res://scripts/entities/enemies/dummy_spawner.gd" id="2_oyflx"]
@@ -11,6 +11,7 @@
 [ext_resource type="PackedScene" path="res://scenes/entities/enemies/RangedEnemy.tscn" id="9_ranged"]
 [ext_resource type="PackedScene" path="res://scenes/world/ReturnTeleport.tscn" id="10_teleport"]
 [ext_resource type="Script" path="res://scripts/world/scene_bootstrap.gd" id="11_bootstrap"]
+[ext_resource type="Script" path="res://scripts/ui/economy_hud.gd" id="12_economy"]
 
 [node name="TestLevel" type="Node2D" unique_id=183531368]
 script = ExtResource("11_bootstrap")
@@ -55,6 +56,9 @@ effect_type = 1
 
 [node name="InventoryMenu" type="CanvasLayer" parent="." unique_id=1689566082]
 script = ExtResource("6_7g7jb")
+
+[node name="EconomyHUD" type="CanvasLayer" parent="."]
+script = ExtResource("12_economy")
 
 [node name="TimedEffectPlatform" parent="." unique_id=249213360 instance=ExtResource("5_po3hi")]
 position = Vector2(183, 219)

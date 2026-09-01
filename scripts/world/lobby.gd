@@ -21,12 +21,13 @@ func _ready() -> void:
 	room.door_right = false
 	room.door_top = false
 	room.door_bottom = false
+	room.grid_size = 25
 	room.interior_index = 0
 	add_child(room)
 
 	# 2. Instanciar jugador y cámara
 	player_instance = player_scene.instantiate() as Player
-	player_instance.position = Vector2(120, 150)
+	player_instance.position = Vector2(200, 210)
 	add_child(player_instance)
 
 	var camera := Camera2D.new()
@@ -36,25 +37,41 @@ func _ready() -> void:
 	# 3. Baúl de Artefactos en el centro
 	if artifact_chest_scene:
 		var chest := artifact_chest_scene.instantiate()
-		chest.position = Vector2(120, 80)
+		chest.position = Vector2(200, 105)
 		add_child(chest)
 
 	# 4. Menú de Inventario
 	var inventory_menu := InventoryMenu.new()
 	add_child(inventory_menu)
+	var economy_hud := EconomyHUD.new()
+	economy_hud.show_materials = true
+	add_child(economy_hud)
+
+	# Seis plataformas pisables: cinco crean un tipo de artefacto y una vacía el baúl.
+	var forge_types: Array[String] = ["Runa", "Libreta", "Pulsera", "Lente", "Anillo"]
+	for index in range(forge_types.size()):
+		var forge := ArtifactForgePlatform.new()
+		forge.artifact_type = forge_types[index]
+		forge.position = Vector2(55 + index * 72, 310)
+		add_child(forge)
+	var clear_forge := ArtifactForgePlatform.new()
+	clear_forge.clear_chest = true
+	clear_forge.position = Vector2(200, 365)
+	add_child(clear_forge)
 
 	# 5. Teleport a Test Level (izquierda)
 	var tp_test := _create_teleport("res://scenes/levels/TestLevel.tscn", "Test Level")
-	tp_test.position = Vector2(50, 120)
+	tp_test.position = Vector2(55, 190)
 	add_child(tp_test)
 
 	# 5. Teleport a Nivel Generado 1 (derecha)
 	var tp_gen := _create_teleport("res://scenes/levels/GeneratedLevel1.tscn", "Nivel Generado 1")
-	tp_gen.position = Vector2(190, 120)
+	tp_gen.position = Vector2(345, 190)
 	add_child(tp_gen)
 
 func _create_teleport(target_scene: String, label_text: String) -> Area2D:
 	var area := Area2D.new()
+	area.collision_mask = 2
 	var col := CollisionShape2D.new()
 	var shape := CircleShape2D.new()
 	shape.radius = 16.0

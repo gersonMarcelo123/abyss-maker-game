@@ -10,8 +10,8 @@ extends Node2D
 @export var melee_enemy_scene: PackedScene = preload("res://scenes/entities/enemies/MeleeEnemy.tscn")
 @export var ranged_enemy_scene: PackedScene = preload("res://scenes/entities/enemies/RangedEnemy.tscn")
 
-const ROOM_TILES := 22 # 45 % mayor que el chunk original de 15×15.
-const START_TILES := 11
+const ROOM_TILES := 25 # Entero: conserva tiles de 16×16 sin escalar texturas.
+const START_TILES := 13
 const TILE_SIZE := 16.0
 const ROOM_SIZE := ROOM_TILES * TILE_SIZE
 const START_SIZE := START_TILES * TILE_SIZE
@@ -116,6 +116,7 @@ func _create_corridor(a: Dictionary, b: Dictionary) -> void:
 func _create_room_trigger(room_id: String, center: Vector2, size: float) -> void:
 	if room_id == "spawn": return
 	var area := Area2D.new()
+	area.collision_mask = 2
 	area.global_position = center
 	var collision := CollisionShape2D.new()
 	var shape := RectangleShape2D.new()
@@ -154,6 +155,7 @@ func _spawn_player(start_center: Vector2) -> void:
 	camera.position_smoothing_speed = 8.0
 	player_instance.add_child(camera)
 	add_child(InventoryMenu.new())
+	add_child(EconomyHUD.new())
 
 func _create_teleport(at_position: Vector2) -> void:
 	_teleport_instance = return_teleport_scene.instantiate() as Node2D

@@ -4,14 +4,14 @@ extends RefCounted
 static func icon_for(accessory: Dictionary) -> String:
 	match str(accessory.get("type", "")):
 		"Runa": return "🔹"
-		"Manual": return "📘"
+		"Libreta": return "📘"
 		"Pulsera": return "📿"
 		"Lente": return "🔍"
 		"Anillo": return "💍"
 		_: return "▫"
 
 static func stat_name(key: String) -> String:
-	var names := {"physical_damage":"Daño físico", "magic_damage":"Daño mágico", "strength":"Fuerza", "intelligence":"Inteligencia", "agility":"Agilidad", "resistance":"Resistencia", "armor":"Armadura", "move_speed_percent":"Vel. movimiento", "cooldown_reduction_percent":"CDR", "healing_bonus_percent":"Bono curación", "ranged_attack_range":"Rango ataque", "cast_range":"Rango casteo"}
+	var names := {"physical_damage":"Daño físico", "magic_damage":"Daño mágico", "strength":"Fuerza", "intelligence":"Inteligencia", "agility":"Agilidad", "resistance":"Resistencia", "armor":"Armadura", "move_speed_percent":"Velocidad de movimiento", "cooldown_reduction_percent":"Reducción de enfriamiento", "healing_bonus_percent":"Bono de curación", "ranged_attack_range":"Rango de ataque", "cast_range":"Rango de casteo", "max_health":"Vida máxima", "max_mana":"Maná máximo", "attack_speed":"Velocidad de ataque"}
 	return names.get(key, key)
 
 static func format_stat(key: String, value: Variant) -> String:

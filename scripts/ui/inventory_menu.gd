@@ -13,8 +13,11 @@ var _root: Control
 var _sheets_container: HBoxContainer
 var _selected_slot: Dictionary = {}
 var _accessory_tooltip: AccessoryTooltip = null
+var _show_loot := false
+var _loot_panel: PanelContainer = null
 
 func _ready() -> void:
+	add_to_group("inventory_menus")
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	layer = 10
 	_build_ui()
@@ -33,6 +36,9 @@ func toggle() -> void:
 	else: open()
 
 func open() -> void:
+	for chest in get_tree().get_nodes_in_group("artifact_chests"):
+		if chest.has_method("is_menu_open") and chest.is_menu_open():
+			return
 	_is_open = true
 	visible = true
 	get_tree().paused = true
@@ -44,6 +50,9 @@ func close() -> void:
 	_selected_slot.clear()
 	_clear_accessory_tooltip()
 	get_tree().paused = false
+
+func is_open() -> bool:
+	return _is_open
 
 func _build_ui() -> void:
 	_root = Control.new()
@@ -65,13 +74,13 @@ func _build_ui() -> void:
 	hint.add_theme_font_size_override("font_size", 8)
 	hint.add_theme_color_override("font_color", Color(0.75, 0.75, 0.75))
 	_root.add_child(hint)
-	var drop_button := Button.new()
-	drop_button.text = "Tirar seleccionado"
-	drop_button.position = Vector2(145, 6)
-	drop_button.size = Vector2(92, 19)
-	drop_button.add_theme_font_size_override("font_size", 7)
-	drop_button.pressed.connect(_drop_selected)
-	_root.add_child(drop_button)
+	var loot_button := Button.new()
+	loot_button.text = "Botín"
+	loot_button.position = Vector2(145, 6)
+	loot_button.size = Vector2(60, 19)
+	loot_button.add_theme_font_size_override("font_size", 8)
+	loot_button.pressed.connect(func(): _show_loot = not _show_loot; _refresh_loot_panel())
+	_root.add_child(loot_button)
 	_sheets_container = HBoxContainer.new()
 	_sheets_container.position = Vector2(8, 33)
 	_sheets_container.add_theme_constant_override("separation", int(panel_spacing))
@@ -83,6 +92,30 @@ func _refresh_sheets() -> void:
 	players.sort_custom(func(a, b): return a.player_index < b.player_index)
 	for player in players:
 		_sheets_container.add_child(_build_player_sheet(player))
+	_refresh_loot_panel()
+
+func _refresh_loot_panel() -> void:
+	if is_instance_valid(_loot_panel): _loot_panel.queue_free()
+	_loot_panel = null
+	if not _show_loot: return
+	var panel := PanelContainer.new()
+	panel.position = Vector2(214, 32)
+	panel.custom_minimum_size = Vector2(230, 120)
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.06, 0.08, 0.12, 0.96)
+	style.set_border_width_all(1)
+	style.border_color = Color(0.55, 0.6, 0.68)
+	panel.add_theme_stylebox_override("panel", style)
+	var rows := VBoxContainer.new()
+	panel.add_child(rows)
+	rows.add_child(_label("Botín", 10, Color(0.95, 0.84, 0.45)))
+	if GameState.materials.is_empty():
+		rows.add_child(_label("Aún no tienes chatarra.", 8, Color(0.7, 0.7, 0.75)))
+	else:
+		for material_name in GameState.materials:
+			rows.add_child(_label("%s ×%d" % [material_name, GameState.materials[material_name]], 8, Color.WHITE))
+	_root.add_child(panel)
+	_loot_panel = panel
 
 func _build_player_sheet(player: Node) -> Control:
 	var panel := PanelContainer.new()
@@ -102,9 +135,10 @@ func _build_player_sheet(player: Node) -> Control:
 	panel.add_child(box)
 	var stats: CharacterStats = player.stats
 	box.add_child(_label("J%d" % (player.player_index + 1), 9, Color.WHITE))
-	box.add_child(_label("HP %d MP %d AS %.1f" % [stats.current_health, stats.current_mana, stats.attack_speed], 6, Color(0.75, 0.85, 1.0)))
-	box.add_child(_label("S%d I%d A%d R%d" % [stats.get_total_strength(), stats.get_total_intelligence(), stats.get_total_agility(), stats.get_total_resistance()], 6, Color(0.9, 0.85, 0.5)))
-	box.add_child(_label("F%.0f M%.0f Ar%.0f" % [stats.physical_damage, stats.magic_damage, stats.armor], 6, Color(0.72, 0.82, 0.95)))
+	box.add_child(_label("Vida: %d · Maná: %d · Velocidad de ataque: %.1f" % [stats.current_health, stats.current_mana, stats.attack_speed], 6, Color(0.75, 0.85, 1.0)))
+	box.add_child(_label("Fuerza: %d · Inteligencia: %d" % [stats.get_total_strength(), stats.get_total_intelligence()], 6, Color(0.9, 0.85, 0.5)))
+	box.add_child(_label("Agilidad: %d · Resistencia: %d" % [stats.get_total_agility(), stats.get_total_resistance()], 6, Color(0.9, 0.85, 0.5)))
+	box.add_child(_label("Daño físico: %.0f · Daño mágico: %.0f · Armadura: %.0f" % [stats.physical_damage, stats.magic_damage, stats.armor], 6, Color(0.72, 0.82, 0.95)))
 	box.add_child(_label("Activos", 7, Color(0.85, 0.9, 0.55)))
 	box.add_child(_build_slot_grid(player, "active", 6, Color(0.25, 0.38, 0.26)))
 	box.add_child(_label("Guardado", 7, Color(0.65, 0.65, 0.7)))

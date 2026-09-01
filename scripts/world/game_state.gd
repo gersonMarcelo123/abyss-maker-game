@@ -2,15 +2,40 @@
 ## parte del inventario: se guardan por jugador y por tipo de accesorio.
 extends Node
 
-const ACCESSORY_SLOTS := ["Runa", "Manual", "Pulsera", "Lente", "Anillo"]
+const ACCESSORY_SLOTS := ["Runa", "Libreta", "Pulsera", "Lente", "Anillo"]
 var equipped_accessories: Dictionary = {}
+var artifact_chest: Array[Dictionary] = []
+var gold: int = 0
+var materials: Dictionary = {}
+var level: int = 1
+
+signal gold_changed(total: int)
+signal materials_changed
+
+func add_artifact(artifact: Dictionary) -> void:
+	artifact_chest.append(artifact.duplicate(true))
+
+func get_chest_artifacts() -> Array[Dictionary]:
+	return artifact_chest.duplicate(true)
+
+func clear_artifact_chest() -> void:
+	artifact_chest.clear()
+
+func add_gold(amount: int) -> void:
+	gold = max(gold + amount, 0)
+	gold_changed.emit(gold)
+
+func add_material(material_name: String, amount: int = 1) -> void:
+	materials[material_name] = int(materials.get(material_name, 0)) + max(amount, 0)
+	materials_changed.emit()
 
 func get_accessories(player_index: int) -> Dictionary:
 	if not equipped_accessories.has(player_index):
 		var slots: Dictionary = {}
-		for slot_name in ACCESSORY_SLOTS:
-			slots[slot_name] = {}
 		equipped_accessories[player_index] = slots
+	for slot_name in ACCESSORY_SLOTS:
+		if not equipped_accessories[player_index].has(slot_name):
+			equipped_accessories[player_index][slot_name] = {}
 	return equipped_accessories[player_index].duplicate(true)
 
 func set_accessory(player_index: int, slot_name: String, accessory: Dictionary) -> void:

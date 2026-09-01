@@ -29,8 +29,9 @@ func show_accessory(accessory: Dictionary, _screen_position: Vector2) -> void:
 		main.add_theme_font_size_override("font_size", 9)
 		main.add_theme_color_override("font_color", Color(1.0, 0.85, 0.35))
 		box.add_child(main)
-		var maximum_secondary := AccessoryPresentation.tier_of(accessory) - 1
-		for index in range(1, min(keys.size(), maximum_secondary + 1)):
+		# La ficha muestra todos los modificadores existentes, sin ocultar
+		# atributos principales ni secundarios.
+		for index in range(1, keys.size()):
 			var secondary := Label.new()
 			secondary.text = "Sec.: " + AccessoryPresentation.format_stat(str(keys[index]), bonuses[keys[index]])
 			secondary.add_theme_font_size_override("font_size", 9)
