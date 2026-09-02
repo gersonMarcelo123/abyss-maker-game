@@ -17,6 +17,15 @@ var scrap: Dictionary = {}
 
 var level: int = 1
 
+# ----- Weapon chest (persistent across scenes) -----
+var weapon_chest: Array[Dictionary] = []
+signal weapon_chest_changed
+
+# Inventarios y equipo conservados al cambiar de escena. Así las armas no
+# desaparecen aunque el Player se vuelva a instanciar en el siguiente nivel.
+var player_loadouts: Dictionary = {}
+signal player_loadout_changed(player_index: int)
+
 # ----- Signals -----
 signal gold_changed(total: int)
 signal crystals_changed(total: int)
@@ -46,6 +55,35 @@ func add_crystals(amount: int) -> void:
 func add_scrap(item_name: String, amount: int = 1) -> void:
 	scrap[item_name] = int(scrap.get(item_name, 0)) + max(amount, 0)
 	scrap_changed.emit()
+
+# ----- Weapon chest handling -----
+func add_weapon_to_chest(weapon: Dictionary) -> void:
+	weapon_chest.append(weapon.duplicate(true))
+	weapon_chest_changed.emit()
+
+func remove_weapon_from_chest(index: int) -> Dictionary:
+	if index < 0 or index >= weapon_chest.size():
+		return {}
+	var removed: Dictionary = weapon_chest[index]
+	weapon_chest.remove_at(index)
+	weapon_chest_changed.emit()
+	return removed
+
+func get_weapon_chest() -> Array[Dictionary]:
+	return weapon_chest.duplicate(true)
+
+func add_item_to_weapon_chest(item: Dictionary) -> void:
+	weapon_chest.append(item.duplicate(true))
+	weapon_chest_changed.emit()
+
+func get_player_loadout(player_index: int) -> Dictionary:
+	if not player_loadouts.has(player_index):
+		player_loadouts[player_index] = {"active": [{}, {}, {}, {}, {}, {}], "storage": [{}, {}, {}], "weapon": {}, "tool": {}}
+	return player_loadouts[player_index].duplicate(true)
+
+func set_player_loadout(player_index: int, loadout: Dictionary) -> void:
+	player_loadouts[player_index] = loadout.duplicate(true)
+	player_loadout_changed.emit(player_index)
 
 # ----- Accessory management -----
 func get_accessories(player_index: int) -> Dictionary:

@@ -59,6 +59,8 @@ var item_healing_bonus_percent: float = 0.0
 var item_ranged_attack_range_bonus: float = 0.0
 var item_cast_range_bonus: float = 0.0
 var item_armor_bonus: float = 0.0
+var item_max_mana_bonus: float = 0.0
+var item_health_regen_bonus: float = 0.0
 var accessory_bonuses: Dictionary = {}
 
 var max_health: float
@@ -171,6 +173,8 @@ func set_item_bonuses(bonuses: Dictionary) -> void:
 	item_ranged_attack_range_bonus = float(bonuses.get("ranged_attack_range", 0.0))
 	item_cast_range_bonus = float(bonuses.get("cast_range", 0.0))
 	item_armor_bonus = float(bonuses.get("armor", 0.0))
+	item_max_mana_bonus = float(bonuses.get("max_mana", 0.0))
+	item_health_regen_bonus = float(bonuses.get("health_regen", 0.0))
 	_recalculate()
 
 func set_accessory_bonuses(bonuses: Dictionary) -> void:
@@ -267,14 +271,14 @@ func _recalculate() -> void:
 	var old_max_health := max_health
 	var old_max_mana := max_mana
 	max_health = base_max_health + (strength + item_strength + int(_accessory_value("strength"))) * 10.0 + _accessory_value("max_health")
-	max_mana = base_max_mana + (intelligence + item_intelligence + int(_accessory_value("intelligence"))) * 10.0 + _accessory_value("max_mana")
+	max_mana = base_max_mana + (intelligence + item_intelligence + int(_accessory_value("intelligence"))) * 10.0 + item_max_mana_bonus + _accessory_value("max_mana")
 	attack_speed = base_attack_speed * (1.0 + (agility + item_agility + int(_accessory_value("agility"))) * 0.01) + _accessory_value("attack_speed")
 	physical_damage = base_physical_damage + physical_damage_bonus + item_physical_damage_bonus + _accessory_value("physical_damage")
 	magic_damage = base_magic_damage + magic_damage_bonus + item_magic_damage_bonus + _accessory_value("magic_damage")
 	movement_speed = base_move_speed * (1.0 + (movement_speed_bonus_percent + item_movement_speed_bonus_percent + _accessory_value("move_speed_percent")) / 100.0)
 	armor = base_armor + armor_bonus + item_armor_bonus + _accessory_value("armor")
 	armor_damage_reduction = max(armor, 0.0) / (max(armor, 0.0) + armor_constant)
-	health_regen = (resistance + item_resistance + int(_accessory_value("resistance"))) * 0.5
+	health_regen = (resistance + item_resistance + int(_accessory_value("resistance"))) * 0.5 + item_health_regen_bonus
 	mana_regen = (resistance + item_resistance + int(_accessory_value("resistance"))) * 0.5
 	ability_cooldown_multiplier = 1.0 - get_total_cooldown_reduction_percent() / 100.0
 	if old_max_health > 0.0 and max_health != old_max_health:

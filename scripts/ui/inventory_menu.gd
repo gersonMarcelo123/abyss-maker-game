@@ -4,7 +4,7 @@
 class_name InventoryMenu
 extends CanvasLayer
 
-@export var panel_size: Vector2 = Vector2(116, 220)
+@export var panel_size: Vector2 = Vector2(152, 220)
 @export var panel_spacing: float = 8.0
 @export var slot_size: float = 21.0
 
@@ -13,8 +13,7 @@ var _root: Control
 var _sheets_container: HBoxContainer
 var _selected_slot: Dictionary = {}
 var _accessory_tooltip: AccessoryTooltip = null
-var _show_loot := false
-var _loot_panel: PanelContainer = null
+
 
 func _ready() -> void:
 	add_to_group("inventory_menus")
@@ -39,6 +38,9 @@ func open() -> void:
 	for chest in get_tree().get_nodes_in_group("artifact_chests"):
 		if chest.has_method("is_menu_open") and chest.is_menu_open():
 			return
+	for chest in get_tree().get_nodes_in_group("weapon_chests"):
+		if chest.has_method("is_menu_open") and chest.is_menu_open():
+			return
 	_is_open = true
 	visible = true
 	get_tree().paused = true
@@ -58,36 +60,50 @@ func _build_ui() -> void:
 	_root = Control.new()
 	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(_root)
+
+	# Fondo oscuro
 	var dim := ColorRect.new()
 	dim.color = Color(0, 0, 0, 0.65)
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_root.add_child(dim)
+
+	# --- Título centrado en la parte superior ---
+	var header := VBoxContainer.new()
+	header.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	header.anchor_left = 0.0
+	header.anchor_right = 1.0
+	header.anchor_top = 0.0
+	header.anchor_bottom = 0.0
+	header.offset_top = 10
+	header.offset_bottom = 52
+	header.alignment = BoxContainer.ALIGNMENT_CENTER
+	header.add_theme_constant_override("separation", 2)
+	_root.add_child(header)
+
 	var title := Label.new()
 	title.text = "INVENTARIO"
-	title.position = Vector2(12, 8)
-	title.add_theme_font_size_override("font_size", 12)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 14)
 	title.add_theme_color_override("font_color", Color.WHITE)
-	_root.add_child(title)
+	header.add_child(title)
+
 	var hint := Label.new()
-	hint.text = "I: cerrar · clic: mover · L2: tirar"
-	hint.position = Vector2(12, 29)
+	hint.text = "I: cerrar  ·  clic: mover  ·  L2: tirar"
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.add_theme_font_size_override("font_size", 8)
 	hint.add_theme_color_override("font_color", Color(0.75, 0.75, 0.75))
-	_root.add_child(hint)
-	var loot_button := Button.new()
-	loot_button.text = "Botín"
-	loot_button.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	loot_button.offset_left = -76
-	loot_button.offset_top = 8
-	loot_button.offset_right = -14
-	loot_button.offset_bottom = 28
-	loot_button.add_theme_font_size_override("font_size", 9)
-	loot_button.pressed.connect(func(): _show_loot = not _show_loot; _refresh_loot_panel())
-	_root.add_child(loot_button)
+	header.add_child(hint)
+
+	# --- Paneles de jugadores, centrados y debajo del header ---
+	var sheets_wrapper := CenterContainer.new()
+	sheets_wrapper.set_anchors_preset(Control.PRESET_FULL_RECT)
+	sheets_wrapper.offset_top = 58  # deja espacio al header
+	_root.add_child(sheets_wrapper)
+
 	_sheets_container = HBoxContainer.new()
-	_sheets_container.position = Vector2(8, 33)
 	_sheets_container.add_theme_constant_override("separation", int(panel_spacing))
-	_root.add_child(_sheets_container)
+	sheets_wrapper.add_child(_sheets_container)
+
 
 func _refresh_sheets() -> void:
 	for child in _sheets_container.get_children(): child.queue_free()
@@ -95,45 +111,6 @@ func _refresh_sheets() -> void:
 	players.sort_custom(func(a, b): return a.player_index < b.player_index)
 	for player in players:
 		_sheets_container.add_child(_build_player_sheet(player))
-	_refresh_loot_panel()
-
-func _refresh_loot_panel() -> void:
-	if is_instance_valid(_loot_panel): _loot_panel.queue_free()
-	_loot_panel = null
-	if not _show_loot: return
-	var panel := PanelContainer.new()
-	panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	panel.offset_left = -230
-	panel.offset_top = 34
-	panel.offset_right = -14
-	panel.offset_bottom = 240
-	panel.custom_minimum_size = Vector2(210, 100)
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.06, 0.08, 0.12, 0.96)
-	style.set_border_width_all(1)
-	style.border_color = Color(0.55, 0.6, 0.68)
-	style.set_corner_radius_all(4)
-	style.content_margin_left = 6
-	style.content_margin_right = 6
-	style.content_margin_top = 6
-	style.content_margin_bottom = 6
-	panel.add_theme_stylebox_override("panel", style)
-	var scroll := ScrollContainer.new()
-	panel.add_child(scroll)
-	var rows := VBoxContainer.new()
-	rows.add_theme_constant_override("separation", 2)
-	scroll.add_child(rows)
-	rows.add_child(_label("PIEZAS DE CHATARRA (BOTÍN)", 9, Color(0.95, 0.84, 0.45)))
-	var has_items := false
-	for scrap_name in GameState.scrap:
-		var count: int = int(GameState.scrap[scrap_name])
-		if count > 0:
-			has_items = true
-			rows.add_child(_label("%s ×%d" % [scrap_name, count], 8, Color.WHITE))
-	if not has_items:
-		rows.add_child(_label("Aún no tienes chatarra.", 8, Color(0.7, 0.7, 0.75)))
-	_root.add_child(panel)
-	_loot_panel = panel
 
 func _build_player_sheet(player: Node) -> Control:
 	var panel := PanelContainer.new()
@@ -148,9 +125,11 @@ func _build_player_sheet(player: Node) -> Control:
 	style.content_margin_top = 5
 	style.content_margin_bottom = 5
 	panel.add_theme_stylebox_override("panel", style)
+
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 2)
 	panel.add_child(box)
+
 	var stats: CharacterStats = player.stats
 	box.add_child(_label("J%d" % (player.player_index + 1), 9, Color.WHITE))
 	box.add_child(_label("Vida: %d · Maná: %d · Velocidad de ataque: %.1f" % [stats.current_health, stats.current_mana, stats.attack_speed], 6, Color(0.75, 0.85, 1.0)))
@@ -158,12 +137,37 @@ func _build_player_sheet(player: Node) -> Control:
 	box.add_child(_label("Agilidad: %d · Resistencia: %d" % [stats.get_total_agility(), stats.get_total_resistance()], 6, Color(0.9, 0.85, 0.5)))
 	box.add_child(_label("Daño físico: %.0f · Daño mágico: %.0f · Armadura: %.0f" % [stats.physical_damage, stats.magic_damage, stats.armor], 6, Color(0.72, 0.82, 0.95)))
 	box.add_child(_label("Activos", 7, Color(0.85, 0.9, 0.55)))
-	box.add_child(_build_slot_grid(player, "active", 6, Color(0.25, 0.38, 0.26)))
+	# Los dos slots especiales quedan exactamente al lado derecho de los
+	# activos y alineados con sus dos filas, como la referencia visual.
+	var active_row := HBoxContainer.new()
+	active_row.add_theme_constant_override("separation", 14)
+	active_row.add_child(_build_slot_grid(player, "active", 6, Color(0.25, 0.38, 0.26)))
+	var special_slots := VBoxContainer.new()
+	special_slots.add_theme_constant_override("separation", 3)
+	special_slots.add_child(_build_weapon_slot(player))
+	special_slots.add_child(_build_tool_slot(player))
+	active_row.add_child(special_slots)
+	box.add_child(active_row)
 	box.add_child(_label("Guardado", 7, Color(0.65, 0.65, 0.7)))
 	box.add_child(_build_slot_grid(player, "storage", 3, Color(0.25, 0.25, 0.3)))
 	box.add_child(_label("Accesorios", 7, Color(0.4, 0.8, 1.0)))
 	box.add_child(_build_accessory_grid(player))
+
 	return panel
+
+func _build_weapon_slot(player: Node) -> Button:
+	var item: Dictionary = player.get_inventory_item("weapon", 0)
+	var slot := _build_slot(player, "weapon", 0, item, Color(0.1, 0.1, 0.14))
+	slot.custom_minimum_size = Vector2(slot_size, slot_size)
+	slot.tooltip_text = "Arma: " + str(item.get("name", "Vacío"))
+	return slot
+
+func _build_tool_slot(player: Node) -> Button:
+	var item: Dictionary = player.get_inventory_item("tool", 0)
+	var slot := _build_slot(player, "tool", 0, item, Color(0.1, 0.1, 0.14))
+	slot.custom_minimum_size = Vector2(slot_size, slot_size)
+	slot.tooltip_text = "Herramienta: " + str(item.get("name", "Vacío"))
+	return slot
 
 func _build_accessory_grid(player: Node) -> GridContainer:
 	var container := GridContainer.new()

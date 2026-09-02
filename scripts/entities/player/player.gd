@@ -57,13 +57,12 @@ const ACCESSORY_SLOTS := ["Runa", "Libreta", "Pulsera", "Lente", "Anillo"]
 var active_inventory: Array = []
 var storage_inventory: Array = []
 var accessory_inventory: Dictionary = {}
+var equipped_weapon: Dictionary = {}   # arma equipada (melee, ranged, o item común)
+var equipped_tool: Dictionary = {}     # herramienta equipada (vacío por ahora)
 
 func _ready() -> void:
 	add_to_group("players") # para que las plataformas de efectos lo detecten
-	for _slot in range(ACTIVE_INVENTORY_SLOTS):
-		active_inventory.append({})
-	for _slot in range(STORAGE_INVENTORY_SLOTS):
-		storage_inventory.append({})
+	_load_persistent_loadout()
 	for acc_name in ACCESSORY_SLOTS:
 		accessory_inventory[acc_name] = {}
 	accessory_inventory = GameState.get_accessories(player_index)
@@ -71,11 +70,7 @@ func _ready() -> void:
 	refresh_accessory_bonuses()
 	stats.set_base_move_speed(move_speed)
 
-	attack_component.attack_type = (
-		AttackComponent.AttackType.RANGED if attack_type_is_ranged
-		else AttackComponent.AttackType.MELEE
-	)
-	attack_component.attack_range = ranged_attack_range if attack_type_is_ranged else melee_attack_range
+	_apply_weapon_type()
 	attack_component.attack_windup_started.connect(_on_attack_windup_started)
 	attack_component.attack_fired.connect(_on_attack_fired)
 	target_selector.target_changed.connect(_on_target_changed)
@@ -191,21 +186,27 @@ func _on_target_changed(old_target, new_target) -> void:
 		new_target.set_targeted(true)
 
 func drop_inventory_item(slot_group: String, slot_index: int) -> bool:
-	if slot_group == "accessory":
+	if slot_group == "accessory" or slot_group == "tool":
 		# Los accesorios no se pueden soltar al suelo
 		return false
-	var inventory := _get_inventory_group(slot_group)
-	if slot_index < 0 or slot_index >= inventory.size() or inventory[slot_index].is_empty():
+	var item := get_inventory_item(slot_group, slot_index)
+	if item.is_empty():
 		return false
-	var item: Dictionary = inventory[slot_index]
-	inventory[slot_index] = {}
+	_set_inventory_item(slot_group, slot_index, {})
 	_refresh_active_item_bonuses()
+	_save_persistent_loadout()
 	var dropped := preload("res://scenes/items/GroundItem.tscn").instantiate()
 	dropped.global_position = global_position + _last_aim_dir * 20.0
 	dropped.item_id = item.get("id", "dropped_item")
 	dropped.display_name = item.get("name", "Objeto")
 	dropped.short_name = item.get("short_name", "Obj")
 	dropped.bonuses = item.get("bonuses", {})
+	dropped.loot_kind = "weapon" if item.get("kind", "") == "weapon" else "item"
+	dropped.weapon_type = item.get("weapon_type", "")
+	dropped.weapon_damage = float(item.get("damage", 0.0))
+	dropped.weapon_agility_bonus = int(item.get("agility_bonus", 0))
+	dropped.weapon_passive = item.get("passive", "")
+	dropped.weapon_passive_value = float(item.get("passive_value", 0.0))
 	get_tree().current_scene.add_child(dropped)
 	return true
 
@@ -272,32 +273,97 @@ func add_inventory_item(item: Dictionary) -> bool:
 		if active_inventory[slot_index].is_empty():
 			active_inventory[slot_index] = item.duplicate(true)
 			_refresh_active_item_bonuses()
+			_save_persistent_loadout()
 			return true
 	for slot_index in range(storage_inventory.size()):
 		if storage_inventory[slot_index].is_empty():
 			storage_inventory[slot_index] = item.duplicate(true)
 			_refresh_active_item_bonuses()
+			_save_persistent_loadout()
 			return true
 	return false
 
 func get_inventory_item(slot_group: String, slot_index: int) -> Dictionary:
+	if slot_group == "weapon": return equipped_weapon.duplicate(true)
+	if slot_group == "tool": return equipped_tool.duplicate(true)
 	var inventory := _get_inventory_group(slot_group)
 	if slot_index < 0 or slot_index >= inventory.size():
 		return {}
 	return inventory[slot_index]
 
 func swap_inventory_slots(from_group: String, from_index: int, to_group: String, to_index: int) -> void:
-	var from_inventory := _get_inventory_group(from_group)
-	var to_inventory := _get_inventory_group(to_group)
-	if from_index < 0 or from_index >= from_inventory.size(): return
-	if to_index < 0 or to_index >= to_inventory.size(): return
-	var temporary: Dictionary = from_inventory[from_index]
-	from_inventory[from_index] = to_inventory[to_index]
-	to_inventory[to_index] = temporary
+	var from_item := get_inventory_item(from_group, from_index)
+	var to_item := get_inventory_item(to_group, to_index)
+	if not _can_place_item(from_item, to_group): return
+	if not _can_place_item(to_item, from_group): return
+	_set_inventory_item(from_group, from_index, to_item)
+	_set_inventory_item(to_group, to_index, from_item)
 	_refresh_active_item_bonuses()
+	_save_persistent_loadout()
 
 func _get_inventory_group(slot_group: String) -> Array:
 	return active_inventory if slot_group == "active" else storage_inventory
+
+func _can_place_item(item: Dictionary, slot_group: String) -> bool:
+	if item.is_empty(): return true
+	if slot_group == "tool": return str(item.get("kind", "")) == "herramienta"
+	if slot_group == "weapon": return str(item.get("kind", "")) != "herramienta"
+	return str(item.get("kind", "")) != "herramienta" or slot_group == "storage"
+
+func _set_inventory_item(slot_group: String, slot_index: int, item: Dictionary) -> void:
+	if slot_group == "weapon":
+		equipped_weapon = item.duplicate(true)
+		_apply_weapon_type()
+		return
+	if slot_group == "tool":
+		equipped_tool = item.duplicate(true)
+		return
+	var inventory := _get_inventory_group(slot_group)
+	if slot_index >= 0 and slot_index < inventory.size(): inventory[slot_index] = item.duplicate(true)
+
+func _load_persistent_loadout() -> void:
+	var loadout: Dictionary = GameState.get_player_loadout(player_index)
+	active_inventory = loadout.get("active", []).duplicate(true)
+	storage_inventory = loadout.get("storage", []).duplicate(true)
+	while active_inventory.size() < ACTIVE_INVENTORY_SLOTS: active_inventory.append({})
+	while storage_inventory.size() < STORAGE_INVENTORY_SLOTS: storage_inventory.append({})
+	equipped_weapon = loadout.get("weapon", {}).duplicate(true)
+	equipped_tool = loadout.get("tool", {}).duplicate(true)
+
+func _save_persistent_loadout() -> void:
+	GameState.set_player_loadout(player_index, {"active": active_inventory, "storage": storage_inventory, "weapon": equipped_weapon, "tool": equipped_tool})
+
+# ---- Weapon slot ----
+## Equip a weapon (or common item) into the weapon slot.
+## weapon_type "melee"/"ranged" changes attack mode.
+## Any other item forces melee and applies its bonuses.
+func equip_weapon(item: Dictionary) -> void:
+	equipped_weapon = item.duplicate(true)
+	_apply_weapon_type()
+	_refresh_active_item_bonuses()
+	_save_persistent_loadout()
+
+func unequip_weapon() -> Dictionary:
+	var old: Dictionary = equipped_weapon.duplicate(true)
+	equipped_weapon = {}
+	_apply_weapon_type()
+	_refresh_active_item_bonuses()
+	_save_persistent_loadout()
+	return old
+
+func get_weapon_damage() -> float:
+	return float(equipped_weapon.get("damage", 0.0))
+
+func _apply_weapon_type() -> void:
+	var wtype: String = equipped_weapon.get("weapon_type", "")
+	var is_ranged: bool = (wtype == "ranged")
+	attack_type_is_ranged = is_ranged
+	attack_component.attack_type = (
+		AttackComponent.AttackType.RANGED if is_ranged
+		else AttackComponent.AttackType.MELEE
+	)
+	attack_component.attack_range = ranged_attack_range if is_ranged else melee_attack_range
+	_on_stats_changed()
 
 func _refresh_active_item_bonuses() -> void:
 	var total_bonuses: Dictionary = {}
@@ -307,7 +373,24 @@ func _refresh_active_item_bonuses() -> void:
 		var bonuses: Dictionary = item.get("bonuses", {})
 		for stat_name in bonuses:
 			total_bonuses[stat_name] = total_bonuses.get(stat_name, 0.0) + bonuses[stat_name]
+	# Apply equipped weapon bonuses
+	if not equipped_weapon.is_empty():
+		var wb: Dictionary = equipped_weapon.get("bonuses", {})
+		for stat_name in wb:
+			total_bonuses[stat_name] = total_bonuses.get(stat_name, 0.0) + wb[stat_name]
+		# Weapon-specific flat stats
+		var agi_bonus: int = int(equipped_weapon.get("agility_bonus", 0))
+		if agi_bonus != 0:
+			total_bonuses["agility"] = int(total_bonuses.get("agility", 0)) + agi_bonus
+		var dmg_bonus: float = float(equipped_weapon.get("damage", 0.0))
+		if dmg_bonus != 0.0:
+			total_bonuses["physical_damage"] = total_bonuses.get("physical_damage", 0.0) + dmg_bonus
+		match str(equipped_weapon.get("passive", "")):
+			"health_regen": total_bonuses["health_regen"] = total_bonuses.get("health_regen", 0.0) + float(equipped_weapon.get("passive_value", 0.0))
+			"move_speed": total_bonuses["move_speed_percent"] = total_bonuses.get("move_speed_percent", 0.0) + float(equipped_weapon.get("passive_value", 0.0))
+			"intelligence": total_bonuses["intelligence"] = total_bonuses.get("intelligence", 0.0) + int(equipped_weapon.get("passive_value", 0))
 	stats.set_item_bonuses(total_bonuses)
+
 
 func refresh_accessory_bonuses() -> void:
 	var total_bonuses: Dictionary = {}
@@ -350,9 +433,12 @@ func _on_stats_changed() -> void:
 	attack_component.attacks_per_second = stats.attack_speed
 	move_speed = stats.movement_speed
 	attack_component.attack_range = (
-		ranged_attack_range + stats.get_total_ranged_attack_range_bonus() if attack_type_is_ranged
+		ranged_attack_range + stats.get_total_ranged_attack_range_bonus() + _weapon_range_bonus() if attack_type_is_ranged
 		else melee_attack_range
 	)
+
+func _weapon_range_bonus() -> float:
+	return float(equipped_weapon.get("passive_value", 0.0)) if equipped_weapon.get("passive", "") == "range_bonus" else 0.0
 
 func _on_died() -> void:
 	if _is_dead:
@@ -414,6 +500,8 @@ func _spawn_projectile(target: Node2D) -> void:
 func _apply_melee_damage(target: Node2D) -> void:
 	if target.has_method("take_damage"):
 		target.take_damage(stats.physical_damage, global_position, CharacterStats.DamageType.PHYSICAL)
+		if equipped_weapon.get("passive", "") == "lifesteal":
+			heal(stats.physical_damage * float(equipped_weapon.get("passive_value", 0.0)))
 	print("[P%d] golpea cuerpo a cuerpo a %s" % [player_index, target.name])
 
 func _handle_ability_input() -> void:

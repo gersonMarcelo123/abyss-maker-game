@@ -60,6 +60,8 @@ func _build_visual() -> void:
 func _open_chest_menu() -> void:
 	for menu in get_tree().get_nodes_in_group("inventory_menus"):
 		if menu.has_method("is_open") and menu.is_open(): return
+	for chest in get_tree().get_nodes_in_group("weapon_chests"):
+		if chest.has_method("is_menu_open") and chest.is_menu_open(): return
 	_menu_root = CanvasLayer.new()
 	_menu_root.layer = 15
 	_menu_root.process_mode = Node.PROCESS_MODE_ALWAYS
