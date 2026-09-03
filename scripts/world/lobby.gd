@@ -46,10 +46,6 @@ func _ready() -> void:
 		weapon_chest.position = Vector2(315, 105)
 		add_child(weapon_chest)
 
-	# Armas iniciales: se recogen con el mismo gesto que los ítems.
-	_spawn_weapon("Daga", "Daga", "melee", randi_range(5, 6), "health_regen", 5.0, {}, Vector2(85, 260), Color(0.82, 0.82, 0.9))
-	_spawn_weapon("Arco", "Arco", "ranged", randi_range(7, 8), "move_speed", 10.0, {"physical_damage": 2.0}, Vector2(200, 260), Color(0.62, 0.42, 0.18))
-	_spawn_weapon("Cetro", "Cetro", "ranged", randi_range(7, 8), "intelligence", 10.0, {"max_mana": 300.0}, Vector2(315, 260), Color(0.56, 0.32, 0.86))
 
 	# 4. Menú de Inventario y Economía
 	var inventory_menu_class := preload("res://scripts/ui/inventory_menu.gd")
@@ -111,32 +107,3 @@ func _create_teleport(target_scene: String, label_text: String) -> Area2D:
 			get_tree().call_deferred("change_scene_to_file", target_scene)
 	)
 	return area
-
-func _spawn_weapon(display_name: String, short_name: String, weapon_type: String, damage: float, passive: String, passive_value: float, bonuses: Dictionary, at_position: Vector2, item_color: Color) -> void:
-	# No volver a crear una copia al regresar al Lobby si el arma ya fue recogida.
-	var id := "lobby_" + display_name.to_lower()
-	if _weapon_exists(id): return
-	var item := ground_item_scene.instantiate() as GroundItem
-	item.item_id = id
-	item.display_name = display_name
-	item.short_name = short_name
-	item.loot_kind = "weapon"
-	item.weapon_type = weapon_type
-	item.weapon_damage = damage
-	item.weapon_agility_bonus = 5
-	item.weapon_passive = passive
-	item.weapon_passive_value = passive_value
-	item.bonuses = bonuses
-	item.color = item_color
-	item.global_position = at_position
-	add_child(item)
-
-func _weapon_exists(id: String) -> bool:
-	for loadout in GameState.player_loadouts.values():
-		if loadout.get("weapon", {}).get("id", "") == id: return true
-		for group_name in ["active", "storage"]:
-			for item in loadout.get(group_name, []):
-				if item.get("id", "") == id: return true
-	for item in GameState.weapon_chest:
-		if item.get("id", "") == id: return true
-	return false

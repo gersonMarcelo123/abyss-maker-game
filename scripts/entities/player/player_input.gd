@@ -21,7 +21,7 @@ const BUTTON_ACTIONS := [
 	"attack", "cancel_attack",
 	"ability_1", "ability_2", "ability_3", "ultimate",
 	"gadget", "sprint", "inventory", "pause",
-	"revive",
+	"revive", "interact_pickup", "use_tool",
 ]
 
 var _held: Dictionary = {}
@@ -118,6 +118,10 @@ func _read_keyboard_mouse(action: String) -> bool:
 			return Input.is_key_pressed(KEY_ESCAPE)
 		"revive":
 			return Input.is_key_pressed(KEY_U)
+		"interact_pickup":
+			return Input.is_key_pressed(KEY_F)
+		"use_tool":
+			return Input.is_key_pressed(KEY_R)
 	return false
 
 func _read_gamepad(action: String) -> bool:
@@ -133,15 +137,19 @@ func _read_gamepad(action: String) -> bool:
 		"ability_3":
 			return Input.is_joy_button_pressed(device_id, JOY_BUTTON_B)
 		"ultimate":
-			return Input.is_joy_button_pressed(device_id, JOY_BUTTON_X)
+			return Input.is_joy_button_pressed(device_id, JOY_BUTTON_RIGHT_STICK)
 		"gadget":
 			return Input.is_joy_button_pressed(device_id, JOY_BUTTON_LEFT_SHOULDER)
 		"sprint":
-			return Input.is_joy_button_pressed(device_id, JOY_BUTTON_RIGHT_SHOULDER)
+			return Input.is_joy_button_pressed(device_id, JOY_BUTTON_LEFT_STICK)
 		"inventory":
 			return Input.is_joy_button_pressed(device_id, JOY_BUTTON_BACK)
 		"pause":
 			return Input.is_joy_button_pressed(device_id, JOY_BUTTON_START)
 		"revive":
 			return Input.is_joy_button_pressed(device_id, JOY_BUTTON_DPAD_UP)
+		"interact_pickup":
+			return Input.is_joy_button_pressed(device_id, JOY_BUTTON_X)
+		"use_tool":
+			return Input.is_joy_button_pressed(device_id, JOY_BUTTON_RIGHT_SHOULDER)
 	return false

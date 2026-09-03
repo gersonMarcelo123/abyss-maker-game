@@ -107,13 +107,21 @@ func _physics_process(delta: float) -> void:
 	var is_moving_manually := move_dir != Vector2.ZERO
 	var current_time: float = Time.get_ticks_msec() / 1000.0
 
+	# Recogida de objetos con Tecla F / Boton X
+	if player_input.is_just_pressed("interact_pickup"):
+		_try_pickup_nearby_item()
+
+	# Activación de herramienta con Tecla R / Boton R1
+	if player_input.is_just_pressed("use_tool"):
+		_activate_equipped_tool()
+
+	# Actualizar nombre flotante del ítem más cercano
+	_update_ground_item_floating_names()
+
 	# Al pulsar clic derecho / R2 activa la acción de atacar.
 	# Doble pulsación rápida cancela la acción.
 	if player_input.is_just_pressed("attack"):
-		if _try_pickup_nearby_item():
-			_auto_attack_engaged = false
-			attack_component.cancel()
-		elif _auto_attack_engaged and (current_time - _last_attack_press_time) < 0.38:
+		if _auto_attack_engaged and (current_time - _last_attack_press_time) < 0.38:
 			# Doble pulsación: cancelar acción de atacar
 			_auto_attack_engaged = false
 			attack_component.cancel()
@@ -185,30 +193,6 @@ func _on_target_changed(old_target, new_target) -> void:
 	if is_instance_valid(new_target) and new_target.has_method("set_targeted"):
 		new_target.set_targeted(true)
 
-func drop_inventory_item(slot_group: String, slot_index: int) -> bool:
-	if slot_group == "accessory" or slot_group == "tool":
-		# Los accesorios no se pueden soltar al suelo
-		return false
-	var item := get_inventory_item(slot_group, slot_index)
-	if item.is_empty():
-		return false
-	_set_inventory_item(slot_group, slot_index, {})
-	_refresh_active_item_bonuses()
-	_save_persistent_loadout()
-	var dropped := preload("res://scenes/items/GroundItem.tscn").instantiate()
-	dropped.global_position = global_position + _last_aim_dir * 20.0
-	dropped.item_id = item.get("id", "dropped_item")
-	dropped.display_name = item.get("name", "Objeto")
-	dropped.short_name = item.get("short_name", "Obj")
-	dropped.bonuses = item.get("bonuses", {})
-	dropped.loot_kind = "weapon" if item.get("kind", "") == "weapon" else "item"
-	dropped.weapon_type = item.get("weapon_type", "")
-	dropped.weapon_damage = float(item.get("damage", 0.0))
-	dropped.weapon_agility_bonus = int(item.get("agility_bonus", 0))
-	dropped.weapon_passive = item.get("passive", "")
-	dropped.weapon_passive_value = float(item.get("passive_value", 0.0))
-	get_tree().current_scene.add_child(dropped)
-	return true
 
 # ---------------------------------------------------------------------------
 # API pública de estadísticas — usada por las plataformas de efectos, y a
@@ -306,20 +290,25 @@ func _get_inventory_group(slot_group: String) -> Array:
 
 func _can_place_item(item: Dictionary, slot_group: String) -> bool:
 	if item.is_empty(): return true
-	if slot_group == "tool": return str(item.get("kind", "")) == "herramienta"
-	if slot_group == "weapon": return str(item.get("kind", "")) != "herramienta"
-	return str(item.get("kind", "")) != "herramienta" or slot_group == "storage"
+	var kind: String = str(item.get("kind", "item"))
+	if slot_group == "tool":
+		return kind == "tool" or kind == "herramienta"
+	if slot_group == "weapon":
+		return kind != "tool" and kind != "herramienta"
+	return true
 
 func _set_inventory_item(slot_group: String, slot_index: int, item: Dictionary) -> void:
 	if slot_group == "weapon":
 		equipped_weapon = item.duplicate(true)
 		_apply_weapon_type()
+		_refresh_active_item_bonuses()
 		return
 	if slot_group == "tool":
 		equipped_tool = item.duplicate(true)
 		return
 	var inventory := _get_inventory_group(slot_group)
-	if slot_index >= 0 and slot_index < inventory.size(): inventory[slot_index] = item.duplicate(true)
+	if slot_index >= 0 and slot_index < inventory.size():
+		inventory[slot_index] = item.duplicate(true)
 
 func _load_persistent_loadout() -> void:
 	var loadout: Dictionary = GameState.get_player_loadout(player_index)
@@ -333,10 +322,7 @@ func _load_persistent_loadout() -> void:
 func _save_persistent_loadout() -> void:
 	GameState.set_player_loadout(player_index, {"active": active_inventory, "storage": storage_inventory, "weapon": equipped_weapon, "tool": equipped_tool})
 
-# ---- Weapon slot ----
-## Equip a weapon (or common item) into the weapon slot.
-## weapon_type "melee"/"ranged" changes attack mode.
-## Any other item forces melee and applies its bonuses.
+# ---- Weapon & Tool slots ----
 func equip_weapon(item: Dictionary) -> void:
 	equipped_weapon = item.duplicate(true)
 	_apply_weapon_type()
@@ -351,6 +337,55 @@ func unequip_weapon() -> Dictionary:
 	_save_persistent_loadout()
 	return old
 
+func equip_tool(item: Dictionary) -> void:
+	equipped_tool = item.duplicate(true)
+	_save_persistent_loadout()
+
+func unequip_tool() -> Dictionary:
+	var old: Dictionary = equipped_tool.duplicate(true)
+	equipped_tool = {}
+	_save_persistent_loadout()
+	return old
+
+func _activate_equipped_tool() -> void:
+	if equipped_tool.is_empty():
+		return
+	var effect: String = str(equipped_tool.get("tool_effect", ""))
+	var tool_id: String = str(equipped_tool.get("id", ""))
+	if effect == "teleport" or tool_id == "reloj_del_espacio":
+		_teleport_tool(float(equipped_tool.get("max_distance", 600.0)))
+
+func _teleport_tool(max_dist: float) -> void:
+	var aim_target: Vector2 = Vector2.ZERO
+	if player_input.device_id == -1:
+		aim_target = get_global_mouse_position()
+	else:
+		var aim_vec := player_input.get_aim_vector(self)
+		if aim_vec == Vector2.ZERO:
+			aim_vec = _last_aim_dir
+		aim_target = global_position + aim_vec * max_dist
+	
+	var dir := aim_target - global_position
+	var dist := minf(dir.length(), max_dist)
+	if dist < 1.0:
+		return
+	var target_pos := global_position + dir.normalized() * dist
+	
+	# Raycast contra obstáculos (paredes mask=1)
+	var space_state := get_world_2d().direct_space_state
+	var query := PhysicsRayQueryParameters2D.create(global_position, target_pos, 1)
+	query.exclude = [self]
+	var result := space_state.intersect_ray(query)
+	if not result.is_empty():
+		var hit_pos: Vector2 = result.position
+		var to_hit := hit_pos - global_position
+		target_pos = global_position + to_hit.normalized() * maxf(to_hit.length() - 16.0, 0.0)
+	
+	global_position = target_pos
+	var indicator := FloatingCombatText.new()
+	add_child(indicator)
+	indicator.show_value("¡Teletransporte!", Color(0.3, 0.85, 1.0))
+
 func get_weapon_damage() -> float:
 	return float(equipped_weapon.get("damage", 0.0))
 
@@ -362,7 +397,11 @@ func _apply_weapon_type() -> void:
 		AttackComponent.AttackType.RANGED if is_ranged
 		else AttackComponent.AttackType.MELEE
 	)
-	attack_component.attack_range = ranged_attack_range if is_ranged else melee_attack_range
+	var custom_range: float = float(equipped_weapon.get("range", 0.0))
+	if is_ranged:
+		attack_component.attack_range = custom_range if custom_range > 0.0 else ranged_attack_range
+	else:
+		attack_component.attack_range = melee_attack_range
 	_on_stats_changed()
 
 func _refresh_active_item_bonuses() -> void:
@@ -370,26 +409,91 @@ func _refresh_active_item_bonuses() -> void:
 	for item: Dictionary in active_inventory:
 		if item.is_empty():
 			continue
+		var kind: String = str(item.get("kind", "item"))
+		# Armas y herramientas en casillas generales de inventario NO aplican atributos
+		if kind == "weapon" or kind == "arma" or kind == "tool" or kind == "herramienta":
+			continue
 		var bonuses: Dictionary = item.get("bonuses", {})
 		for stat_name in bonuses:
 			total_bonuses[stat_name] = total_bonuses.get(stat_name, 0.0) + bonuses[stat_name]
-	# Apply equipped weapon bonuses
+
+	# Aplicar estadísticas del arma equipada únicamente
 	if not equipped_weapon.is_empty():
 		var wb: Dictionary = equipped_weapon.get("bonuses", {})
 		for stat_name in wb:
 			total_bonuses[stat_name] = total_bonuses.get(stat_name, 0.0) + wb[stat_name]
-		# Weapon-specific flat stats
-		var agi_bonus: int = int(equipped_weapon.get("agility_bonus", 0))
-		if agi_bonus != 0:
-			total_bonuses["agility"] = int(total_bonuses.get("agility", 0)) + agi_bonus
 		var dmg_bonus: float = float(equipped_weapon.get("damage", 0.0))
 		if dmg_bonus != 0.0:
 			total_bonuses["physical_damage"] = total_bonuses.get("physical_damage", 0.0) + dmg_bonus
-		match str(equipped_weapon.get("passive", "")):
-			"health_regen": total_bonuses["health_regen"] = total_bonuses.get("health_regen", 0.0) + float(equipped_weapon.get("passive_value", 0.0))
-			"move_speed": total_bonuses["move_speed_percent"] = total_bonuses.get("move_speed_percent", 0.0) + float(equipped_weapon.get("passive_value", 0.0))
-			"intelligence": total_bonuses["intelligence"] = total_bonuses.get("intelligence", 0.0) + int(equipped_weapon.get("passive_value", 0))
 	stats.set_item_bonuses(total_bonuses)
+
+func drop_inventory_item(slot_group: String, slot_index: int) -> bool:
+	if slot_group == "accessory":
+		return false
+	var item: Dictionary = {}
+	if slot_group == "weapon":
+		item = unequip_weapon()
+	elif slot_group == "tool":
+		item = unequip_tool()
+	else:
+		var inventory := _get_inventory_group(slot_group)
+		if slot_index < 0 or slot_index >= inventory.size() or inventory[slot_index].is_empty():
+			return false
+		item = inventory[slot_index]
+		inventory[slot_index] = {}
+		_refresh_active_item_bonuses()
+		_save_persistent_loadout()
+	if item.is_empty():
+		return false
+	var dropped := preload("res://scenes/items/GroundItem.tscn").instantiate() as GroundItem
+	dropped.global_position = global_position + _last_aim_dir * 20.0
+	dropped.item_id = str(item.get("id", "dropped_item"))
+	dropped.display_name = str(item.get("name", "Objeto"))
+	dropped.short_name = str(item.get("short_name", "Obj"))
+	dropped.loot_kind = str(item.get("kind", "item"))
+	dropped.tier = int(item.get("tier", 1))
+	dropped.color = AccessoryPresentation.tier_color(item)
+	dropped.full_item_data = item.duplicate(true)
+	get_tree().current_scene.add_child(dropped)
+	return true
+
+func use_item_from_inventory(group: String, index: int, target_player: Player) -> bool:
+	var inv := _get_inventory_group(group)
+	if index < 0 or index >= inv.size() or inv[index].is_empty():
+		return false
+	var item: Dictionary = inv[index]
+	if item.get("is_consumable", false):
+		var heal: float = float(item.get("heal_amount", 0.0))
+		if heal > 0.0 and is_instance_valid(target_player):
+			target_player.heal(heal)
+			var indicator := FloatingCombatText.new()
+			target_player.add_child(indicator)
+			indicator.show_value("+%.0f HP" % heal, Color(0.2, 1.0, 0.4))
+		var uses: int = int(item.get("current_uses", 1)) - 1
+		item["current_uses"] = uses
+		if uses <= 0:
+			inv[index] = {}
+		else:
+			inv[index] = item
+		_refresh_active_item_bonuses()
+		_save_persistent_loadout()
+		return true
+	return false
+
+func _update_ground_item_floating_names() -> void:
+	if player_index != 0: return
+	var nearest_item: GroundItem = null
+	var nearest_dist: float = 75.0
+	var items := get_tree().get_nodes_in_group("ground_items")
+	for node in items:
+		if node is GroundItem and is_instance_valid(node):
+			var d := global_position.distance_to(node.global_position)
+			if d < nearest_dist:
+				nearest_dist = d
+				nearest_item = node
+	for node in items:
+		if node is GroundItem and is_instance_valid(node):
+			node.set_floating_name_visible(node == nearest_item)
 
 
 func refresh_accessory_bonuses() -> void:
@@ -432,8 +536,9 @@ func _on_stats_changed() -> void:
 	# los atributos, se refleja de inmediato en el componente de ataque.
 	attack_component.attacks_per_second = stats.attack_speed
 	move_speed = stats.movement_speed
+	var base_r: float = float(equipped_weapon.get("range", ranged_attack_range)) if attack_type_is_ranged else melee_attack_range
 	attack_component.attack_range = (
-		ranged_attack_range + stats.get_total_ranged_attack_range_bonus() + _weapon_range_bonus() if attack_type_is_ranged
+		base_r + stats.get_total_ranged_attack_range_bonus() + _weapon_range_bonus() if attack_type_is_ranged
 		else melee_attack_range
 	)
 

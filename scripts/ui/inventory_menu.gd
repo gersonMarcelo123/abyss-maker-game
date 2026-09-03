@@ -13,6 +13,7 @@ var _root: Control
 var _sheets_container: HBoxContainer
 var _selected_slot: Dictionary = {}
 var _accessory_tooltip: AccessoryTooltip = null
+var _info_panel: PanelContainer = null
 
 
 func _ready() -> void:
@@ -51,6 +52,7 @@ func close() -> void:
 	visible = false
 	_selected_slot.clear()
 	_clear_accessory_tooltip()
+	_clear_info_panel()
 	get_tree().paused = false
 
 func is_open() -> bool:
@@ -236,8 +238,11 @@ func _label(text_value: String, size: int, color: Color) -> Label:
 func _on_slot_pressed(player: Node, slot_group: String, index: int) -> void:
 	var item: Dictionary = player.get_inventory_item(slot_group, index)
 	if _selected_slot.is_empty():
-		if item.is_empty(): return
+		if item.is_empty():
+			_clear_info_panel()
+			return
 		_selected_slot = {"player": player, "group": slot_group, "index": index}
+		_show_info_panel(item, player, slot_group, index)
 	elif _selected_slot.player == player and _selected_slot.group == slot_group and _selected_slot.index == index:
 		## Segundo clic izquierdo en el mismo objeto: se tira al suelo.
 		_drop_selected()
@@ -245,6 +250,7 @@ func _on_slot_pressed(player: Node, slot_group: String, index: int) -> void:
 	else:
 		_selected_slot.player.swap_inventory_slots(_selected_slot.group, _selected_slot.index, slot_group, index)
 		_selected_slot.clear()
+		_clear_info_panel()
 	_refresh_sheets()
 
 func _is_selected(player: Node, slot_group: String, index: int) -> bool:
@@ -254,4 +260,143 @@ func _drop_selected() -> void:
 	if _selected_slot.is_empty(): return
 	_selected_slot.player.drop_inventory_item(_selected_slot.group, _selected_slot.index)
 	_selected_slot.clear()
+	_clear_info_panel()
+	_refresh_sheets()
+
+func _clear_info_panel() -> void:
+	if is_instance_valid(_info_panel):
+		_info_panel.queue_free()
+	_info_panel = null
+
+func _show_info_panel(item: Dictionary, player: Node, slot_group: String, index: int) -> void:
+	_clear_info_panel()
+	if item.is_empty(): return
+
+	_info_panel = PanelContainer.new()
+	_info_panel.anchor_left = 0.5
+	_info_panel.anchor_right = 0.5
+	_info_panel.anchor_top = 1.0
+	_info_panel.anchor_bottom = 1.0
+	_info_panel.offset_left = -220
+	_info_panel.offset_right = 220
+	_info_panel.offset_top = -92
+	_info_panel.offset_bottom = -6
+
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.06, 0.08, 0.12, 0.98)
+	style.border_color = AccessoryPresentation.tier_color(item)
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(5)
+	style.content_margin_left = 8
+	style.content_margin_right = 8
+	style.content_margin_top = 4
+	style.content_margin_bottom = 4
+	_info_panel.add_theme_stylebox_override("panel", style)
+	_root.add_child(_info_panel)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 2)
+	_info_panel.add_child(vbox)
+
+	# Fila 1: Nombre + Tier + Categoría
+	var header_row := HBoxContainer.new()
+	vbox.add_child(header_row)
+
+	var name_lbl := Label.new()
+	name_lbl.text = str(item.get("name", "Objeto"))
+	name_lbl.add_theme_font_size_override("font_size", 10)
+	name_lbl.add_theme_color_override("font_color", AccessoryPresentation.tier_color(item))
+	header_row.add_child(name_lbl)
+
+	var tier_val: int = int(item.get("tier", 1))
+	var kind_val: String = str(item.get("kind", "item")).capitalize()
+	var lvl_str := (" · Nivel %d" % int(item.get("level", 1))) if item.has("level") else ""
+	var tag_lbl := Label.new()
+	tag_lbl.text = " [Tier %d] · %s%s" % [tier_val, kind_val, lvl_str]
+	tag_lbl.add_theme_font_size_override("font_size", 8)
+	tag_lbl.add_theme_color_override("font_color", Color(0.75, 0.75, 0.8))
+	header_row.add_child(tag_lbl)
+
+	# Fila 2: Descripción y Atributos
+	var desc_text := str(item.get("description", ""))
+	if desc_text.is_empty():
+		var parts: Array[String] = []
+		var bonuses: Dictionary = item.get("bonuses", {})
+		for k in bonuses: parts.append(AccessoryPresentation.format_stat(k, bonuses[k]))
+		desc_text = ", ".join(parts)
+
+	var desc_lbl := Label.new()
+	desc_lbl.text = desc_text
+	desc_lbl.add_theme_font_size_override("font_size", 8)
+	desc_lbl.add_theme_color_override("font_color", Color(0.85, 0.9, 0.95))
+	desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	vbox.add_child(desc_lbl)
+
+	# Fila 3: Menú de Contexto
+	var actions_row := HBoxContainer.new()
+	actions_row.add_theme_constant_override("separation", 6)
+	vbox.add_child(actions_row)
+
+	# Opción Usar en Jugador si es consumible
+	if item.get("is_consumable", false):
+		var players := get_tree().get_nodes_in_group("players")
+		for p in players:
+			var btn := Button.new()
+			btn.text = "Usar en J%d" % (p.player_index + 1)
+			btn.add_theme_font_size_override("font_size", 8)
+			btn.pressed.connect(func():
+				player.use_item_from_inventory(slot_group, index, p)
+				_selected_slot.clear()
+				_clear_info_panel()
+				_refresh_sheets()
+			)
+			actions_row.add_child(btn)
+
+	# Mover a casilla inactiva o activa
+	if slot_group == "active":
+		var btn_store := Button.new()
+		btn_store.text = "Guardar en casilla inactiva"
+		btn_store.add_theme_font_size_override("font_size", 8)
+		btn_store.pressed.connect(func():
+			_move_to_first_free(player, "active", index, "storage")
+		)
+		actions_row.add_child(btn_store)
+	elif slot_group == "storage":
+		var btn_act := Button.new()
+		btn_act.text = "Mover a casilla activa"
+		btn_act.add_theme_font_size_override("font_size", 8)
+		btn_act.pressed.connect(func():
+			_move_to_first_free(player, "storage", index, "active")
+		)
+		actions_row.add_child(btn_act)
+
+	# Botón Soltar
+	var btn_drop := Button.new()
+	btn_drop.text = "Soltar al suelo"
+	btn_drop.add_theme_font_size_override("font_size", 8)
+	btn_drop.pressed.connect(_drop_selected)
+	actions_row.add_child(btn_drop)
+
+	# Botón Cerrar selección
+	var btn_close := Button.new()
+	btn_close.text = "✕"
+	btn_close.add_theme_font_size_override("font_size", 8)
+	btn_close.pressed.connect(func():
+		_selected_slot.clear()
+		_clear_info_panel()
+		_refresh_sheets()
+	)
+	actions_row.add_child(btn_close)
+
+func _move_to_first_free(player: Node, from_group: String, from_index: int, to_group: String) -> void:
+	var target_inv: Array = player._get_inventory_group(to_group)
+	for i in range(target_inv.size()):
+		if target_inv[i].is_empty():
+			player.swap_inventory_slots(from_group, from_index, to_group, i)
+			_selected_slot.clear()
+			_clear_info_panel()
+			_refresh_sheets()
+			return
+	_selected_slot.clear()
+	_clear_info_panel()
 	_refresh_sheets()
